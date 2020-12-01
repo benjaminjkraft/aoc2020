@@ -1,0 +1,37 @@
+package main
+
+import "fmt"
+
+func day01a(input string) (string, error) {
+	ints, err := parseInts(input)
+	if err != nil {
+		return "", err
+	}
+
+	for _, i := range ints {
+		for _, j := range ints {
+			if i+j == 2020 {
+				return fmt.Sprint(i * j), nil
+			}
+		}
+	}
+	return "", fmt.Errorf("no solution found")
+}
+
+func day01b(input string) (string, error) {
+	ints, err := parseInts(input)
+	if err != nil {
+		return "", err
+	}
+
+	for _, i := range ints {
+		for _, j := range ints {
+			for _, k := range ints {
+				if i+j+k == 2020 {
+					return fmt.Sprint(i * j * k), nil
+				}
+			}
+		}
+	}
+	return "", fmt.Errorf("no solution found")
+}

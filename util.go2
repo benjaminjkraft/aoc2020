@@ -1,0 +1,33 @@
+package main
+
+import (
+	"strconv"
+	"strings"
+)
+
+func mapE[T, U any](f func(T) (U, error), xs []T) ([]U, error) {
+	var err error
+	ret := make([]U, len(xs))
+	for i, x := range xs {
+		ret[i], err = f(x)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return ret, nil
+}
+
+func nonzero[T comparable](xs []T) []T {
+	ret := make([]T, 0, len(xs))
+	var z T
+	for _, x := range xs {
+		if x != z {
+			ret = append(ret, x)
+		}
+	}
+	return ret
+}
+
+func parseInts(input string) ([]int, error) {
+	return mapE(strconv.Atoi, nonzero(strings.Split(input, "\n")))
+}

@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"strconv"
+	"strings"
 )
 
 var solutions = map[int][]func(string) (string, error){
@@ -24,12 +25,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	for _, part := range solutions[day] {
-		result, err := part(string(input))
-		if err != nil {
-			fmt.Println(fmt.Errorf("solution failed: %v", err))
-			os.Exit(1)
-		}
-		fmt.Println(result)
+	results, err := mapE[func(string) (string, error), string]( // work around #42920
+		func(f func(string) (string, error)) (string, error) { return f(string(input)) },
+		solutions[day])
+	if err != nil {
+		fmt.Println(fmt.Errorf("solution failed: %v", err))
+		os.Exit(1)
 	}
+	fmt.Println(strings.Join(results, "\n"))
 }

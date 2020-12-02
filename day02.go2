@@ -1,0 +1,62 @@
+package main
+
+import (
+	"fmt"
+	"strconv"
+	"strings"
+)
+
+type password struct {
+	min, max int
+	letter   byte
+	password string
+}
+
+func parseLine(line string) (password, error) {
+	words := strings.Fields(line)
+	if len(words) != 3 {
+		return password{}, fmt.Errorf("expected 3 words in %#v", line)
+	}
+
+	minMax := strings.Split(words[0], "-")
+	if len(minMax) != 2 {
+		return password{}, fmt.Errorf("expected range in %#v", line)
+	}
+
+	minMaxInts, err := mapE(strconv.Atoi, minMax)
+	if err != nil {
+		return password{}, err
+	}
+
+	if len(words[1]) != 2 || words[1][1] != ':' {
+		return password{}, fmt.Errorf("expected <letter>: in %#v", words[1])
+	}
+
+	return password{
+		min:      minMaxInts[0],
+		max:      minMaxInts[1],
+		letter:   words[1][0],
+		password: words[2],
+	}, nil
+}
+
+func parsePasswords(input string) ([]password, error) {
+	return mapE(parseLine, lines(input))
+}
+
+func valid(p password) bool {
+	count := strings.Count(p.password, string(p.letter))
+	return p.min <= count && count <= p.max
+}
+
+func valid2(p password) bool {
+	return (p.password[p.min-1] == p.letter) != (p.password[p.max-1] == p.letter)
+}
+
+func day02a(input []password) (string, error) {
+	return fmt.Sprint(count(valid, input)), nil
+}
+
+func day02b(input []password) (string, error) {
+	return fmt.Sprint(count(valid2, input)), nil
+}

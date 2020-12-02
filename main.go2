@@ -5,32 +5,64 @@ import (
 	"io/ioutil"
 	"os"
 	"strconv"
-	"strings"
 )
 
-var solutions = map[int][]func(string) (string, error){
-	1: {day01a, day01b},
+type solution[T any] struct {
+	parse func(string) (T, error)
+	part1, part2 func(T) (string, error)
 }
 
-func main() {
-	day, err := strconv.Atoi(os.Args[1])
+func (s solution[T]) solve(input string) (string, string, error) {
+	parsed, err := s.parse(input)
 	if err != nil {
-		fmt.Println(fmt.Errorf("invalid argument: %v", err))
-		os.Exit(1)
+		return "", "", fmt.Errorf("invalid input: %w", err)
 	}
 
+	ans1, err := s.part1(parsed)
+	if err != nil {
+		return "", "", err
+	}
+
+	ans2, err := s.part2(parsed)
+	return ans1, ans2, err
+}
+
+type solvable interface { solve(string) (string, string, error) }
+
+var solutions = map[int]solvable{
+	1: solution[[]int]{parseInts, day01a, day01b},
+	2: solution[[]password]{parsePasswords, day02a, day02b},
+}
+
+func run(day int) {
 	input, err := ioutil.ReadFile(fmt.Sprintf("input/%v", day))
 	if err != nil {
 		fmt.Println(fmt.Errorf("invalid input: %v", err))
 		os.Exit(1)
 	}
 
-	results, err := mapE[func(string) (string, error), string]( // work around #42920
-		func(f func(string) (string, error)) (string, error) { return f(string(input)) },
-		solutions[day])
+	ans1, ans2, err := solutions[day].solve(string(input))
 	if err != nil {
 		fmt.Println(fmt.Errorf("solution failed: %v", err))
 		os.Exit(1)
 	}
-	fmt.Println(strings.Join(results, "\n"))
+	fmt.Println(ans1)
+	fmt.Println(ans2)
+}
+
+func main() {
+	if len(os.Args) > 1 {
+		day, err := strconv.Atoi(os.Args[1])
+		if err != nil {
+			fmt.Println(fmt.Errorf("invalid argument: %v", err))
+			os.Exit(1)
+		}
+
+		run(day)
+	} else {
+		for day := range solutions {
+			fmt.Printf("=== day %02d ===\n", day)
+			run(day)
+		}
+	}
 }

@@ -17,17 +17,35 @@ func mapE[T, U any](f func(T) (U, error), xs []T) ([]U, error) {
 	return ret, nil
 }
 
-func nonzero[T comparable](xs []T) []T {
-	ret := make([]T, 0, len(xs))
-	var z T
+func count[T any](f func(T) bool, xs []T) int {
+	ret := 0
 	for _, x := range xs {
-		if x != z {
+		if f(x) {
+			ret++
+		}
+	}
+	return ret
+}
+
+func filter[T any](f func(T) bool, xs []T) []T {
+	ret := make([]T, 0, len(xs))
+	for _, x := range xs {
+		if f(x) {
 			ret = append(ret, x)
 		}
 	}
 	return ret
 }
 
+func nonzero[T comparable](xs []T) []T {
+	var z T
+	return filter(func(x T) bool { return x != z }, xs)
+}
+
+func lines(input string) []string {
+	return nonzero(strings.Split(input, "\n"))
+}
+
 func parseInts(input string) ([]int, error) {
-	return mapE(strconv.Atoi, nonzero(strings.Split(input, "\n")))
+	return mapE(strconv.Atoi, lines(input))
 }

@@ -23,7 +23,7 @@ func parseLine(line string) (password, error) {
 		return password{}, fmt.Errorf("expected range in %#v", line)
 	}
 
-	minMaxInts, err := mapE(strconv.Atoi, minMax)
+	minMaxInts, err := MapE(strconv.Atoi, minMax)
 	if err != nil {
 		return password{}, err
 	}
@@ -41,7 +41,7 @@ func parseLine(line string) (password, error) {
 }
 
 func parsePasswords(input string) ([]password, error) {
-	return mapE(parseLine, lines(input))
+	return MapE(parseLine, lines(input))
 }
 
 func valid(p password) bool {

@@ -1,0 +1,37 @@
+package main
+
+import "fmt"
+
+func parseTrees(input string) ([][]bool, error) {
+	return Map(func(line string) []bool {
+		return Map(func(s byte) bool { return s == '#' }, []byte(line))
+	}, lines(input)), nil
+}
+
+func trees(input [][]bool, right, down int) int {
+	i, j := 0, 0
+	l := len(input[0])
+	count := 0
+	for j < len(input) {
+		if input[j][i%l] {
+			count++
+		}
+		i += right
+		j += down
+	}
+	return count
+}
+
+func day03a(input [][]bool) (string, error) {
+	return fmt.Sprint(trees(input, 3, 1)), nil
+}
+
+func day03b(input [][]bool) (string, error) {
+	return fmt.Sprint(
+		trees(input, 1, 1) *
+			trees(input, 3, 1) *
+			trees(input, 5, 1) *
+			trees(input, 7, 1) *
+			trees(input, 1, 2),
+	), nil
+}

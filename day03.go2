@@ -2,10 +2,8 @@ package main
 
 import "fmt"
 
-func parseTrees(input string) ([][]bool, error) {
-	return Map(func(line string) []bool {
-		return Map(func(s byte) bool { return s == '#' }, []byte(line))
-	}, lines(input)), nil
+func parseTree(line string) ([]bool, error) {
+	return Map(func(s byte) bool { return s == '#' }, []byte(line)), nil
 }
 
 func trees(input [][]bool, right, down int) int {

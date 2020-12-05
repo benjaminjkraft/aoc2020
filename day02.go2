@@ -12,7 +12,7 @@ type password struct {
 	password string
 }
 
-func parseLine(line string) (password, error) {
+func parsePassword(line string) (password, error) {
 	words := strings.Fields(line)
 	if len(words) != 3 {
 		return password{}, fmt.Errorf("expected 3 words in %#v", line)
@@ -38,10 +38,6 @@ func parseLine(line string) (password, error) {
 		letter:   words[1][0],
 		password: words[2],
 	}, nil
-}
-
-func parsePasswords(input string) ([]password, error) {
-	return MapE(parseLine, lines(input))
 }
 
 func valid(p password) bool {

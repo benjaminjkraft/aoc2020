@@ -1,0 +1,47 @@
+package main
+
+import (
+	"fmt"
+	"strconv"
+	"strings"
+)
+
+func toDigit(c rune) rune {
+	switch c {
+	case 'F', 'L':
+		return '0'
+	case 'B', 'R':
+		return '1'
+	default:
+		return c
+	}
+}
+
+func parseSeat(line string) (int, error) {
+	if len(line) != 10 {
+		return 0, fmt.Errorf("wrong length: %v", line)
+	}
+
+	seat, err := strconv.ParseInt(strings.Map(toDigit, line), 2, 64)
+	return int(seat), err
+}
+
+func day05a(seats []int) (string, error) {
+	return fmt.Sprint(max(seats...)), nil
+}
+
+func day05b(seats []int) (string, error) {
+	top := max(seats...)
+	bottom := min(seats...)
+	bits := make([]bool, top-bottom+1)
+	for _, s := range seats {
+		bits[s-bottom] = true
+	}
+	for i, b := range bits {
+		if !b {
+			return fmt.Sprint(i + bottom), nil
+		}
+	}
+	return "", fmt.Errorf("no gap")
+
+}

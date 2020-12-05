@@ -1,7 +1,6 @@
 package main
 
 import (
-	"strconv"
 	"strings"
 )
 
@@ -119,10 +118,36 @@ func nonzero[T comparable](xs []T) []T {
 	return filter(func(x T) bool { return x != z }, xs)
 }
 
-func lines(input string) []string {
-	return nonzero(strings.Split(input, "\n"))
+func lineParser[T any](f func(string) (T, error)) func(string) ([]T, error) {
+	return func(input string) ([]T, error) {
+		return MapE(f, nonzero(strings.Split(input, "\n")))
+	}
 }
 
-func parseInts(input string) ([]int, error) {
-	return MapE(strconv.Atoi, lines(input))
+func max(xs ...int) int {
+	if len(xs) == 0 {
+		panic("max of no args")
+	}
+
+	m := xs[0]
+	for _, x := range xs[1:] {
+		if x > m {
+			m = x
+		}
+	}
+	return m
+}
+
+func min(xs ...int) int {
+	if len(xs) == 0 {
+		panic("min of no args")
+	}
+
+	m := xs[0]
+	for _, x := range xs[1:] {
+		if x < m {
+			m = x
+		}
+	}
+	return m
 }

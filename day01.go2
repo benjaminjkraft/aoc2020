@@ -2,26 +2,26 @@ package main
 
 import "fmt"
 
-func day01a(input []int) (string, error) {
+func day01a(input []int) (int, error) {
 	for _, i := range input {
 		for _, j := range input {
 			if i+j == 2020 {
-				return fmt.Sprint(i * j), nil
+				return i * j, nil
 			}
 		}
 	}
-	return "", fmt.Errorf("no solution found")
+	return -1, fmt.Errorf("no solution found")
 }
 
-func day01b(input []int) (string, error) {
+func day01b(input []int) (int, error) {
 	for _, i := range input {
 		for _, j := range input {
 			for _, k := range input {
 				if i+j+k == 2020 {
-					return fmt.Sprint(i * j * k), nil
+					return i * j * k, nil
 				}
 			}
 		}
 	}
-	return "", fmt.Errorf("no solution found")
+	return -1, fmt.Errorf("no solution found")
 }

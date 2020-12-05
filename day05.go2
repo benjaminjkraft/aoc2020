@@ -26,11 +26,11 @@ func parseSeat(line string) (int, error) {
 	return int(seat), err
 }
 
-func day05a(seats []int) (string, error) {
-	return fmt.Sprint(max(seats...)), nil
+func day05a(seats []int) (int, error) {
+	return max(seats...), nil
 }
 
-func day05b(seats []int) (string, error) {
+func day05b(seats []int) (int, error) {
 	top := max(seats...)
 	bottom := min(seats...)
 	bits := make([]bool, top-bottom+1)
@@ -39,9 +39,9 @@ func day05b(seats []int) (string, error) {
 	}
 	for i, b := range bits {
 		if !b {
-			return fmt.Sprint(i + bottom), nil
+			return i + bottom, nil
 		}
 	}
-	return "", fmt.Errorf("no gap")
+	return -1, fmt.Errorf("no gap")
 
 }

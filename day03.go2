@@ -1,7 +1,5 @@
 package main
 
-import "fmt"
-
 func parseTree(line string) ([]bool, error) {
 	return Map(func(s byte) bool { return s == '#' }, []byte(line)), nil
 }
@@ -20,16 +18,14 @@ func trees(input [][]bool, right, down int) int {
 	return count
 }
 
-func day03a(input [][]bool) (string, error) {
-	return fmt.Sprint(trees(input, 3, 1)), nil
+func day03a(input [][]bool) (int, error) {
+	return trees(input, 3, 1), nil
 }
 
-func day03b(input [][]bool) (string, error) {
-	return fmt.Sprint(
-		trees(input, 1, 1) *
-			trees(input, 3, 1) *
-			trees(input, 5, 1) *
-			trees(input, 7, 1) *
-			trees(input, 1, 2),
-	), nil
+func day03b(input [][]bool) (int, error) {
+	return (trees(input, 1, 1) *
+		trees(input, 3, 1) *
+		trees(input, 5, 1) *
+		trees(input, 7, 1) *
+		trees(input, 1, 2)), nil
 }

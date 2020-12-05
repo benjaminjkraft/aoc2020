@@ -10,26 +10,29 @@ import (
 
 type solution[T any] struct {
 	parse        func(string) (T, error)
-	part1, part2 func(T) (string, error)
+	part1, part2 func(T) (int, error)
 }
 
-func (s solution[T]) solve(input string) (string, string, error) {
+func (s solution[T]) solve(input string) (int, int, error) {
 	parsed, err := s.parse(input)
 	if err != nil {
-		return "", "", fmt.Errorf("invalid input: %w", err)
+		return -1, -1, fmt.Errorf("invalid input: %w", err)
 	}
 
 	ans1, err := s.part1(parsed)
 	if err != nil {
-		return "", "", err
+		return -1, -1, fmt.Errorf("part 1 failed: %w", err)
 	}
 
 	ans2, err := s.part2(parsed)
-	return ans1, ans2, err
+	if err != nil {
+		return -1, -1, fmt.Errorf("part 2 failed: %w", err)
+	}
+	return ans1, ans2, nil
 }
 
 type solvable interface {
-	solve(string) (string, string, error)
+	solve(string) (int, int, error)
 }
 
 var solutions = map[int]solvable{
@@ -49,7 +52,7 @@ func run(day int) {
 
 	ans1, ans2, err := solutions[day].solve(string(input))
 	if err != nil {
-		fmt.Println(fmt.Errorf("solution failed: %v", err))
+		fmt.Println(err)
 		os.Exit(1)
 	}
 	fmt.Println(ans1)

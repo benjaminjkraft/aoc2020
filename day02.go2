@@ -49,10 +49,10 @@ func valid2(p password) bool {
 	return (p.password[p.min-1] == p.letter) != (p.password[p.max-1] == p.letter)
 }
 
-func day02a(input []password) (string, error) {
-	return fmt.Sprint(count(valid, input)), nil
+func day02a(input []password) (int, error) {
+	return count(valid, input), nil
 }
 
-func day02b(input []password) (string, error) {
-	return fmt.Sprint(count(valid2, input)), nil
+func day02b(input []password) (int, error) {
+	return count(valid2, input), nil
 }

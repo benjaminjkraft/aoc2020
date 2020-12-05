@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 	"unicode"
@@ -60,10 +59,10 @@ func parsePassports(input string) ([]passport, error) {
 	}, nonzero(strings.Split(input, "\n\n"))), nil
 }
 
-func day04a(passports []passport) (string, error) {
-	return fmt.Sprint(count(func(p passport) bool { return p.valid1() }, passports)), nil
+func day04a(passports []passport) (int, error) {
+	return count(func(p passport) bool { return p.valid1() }, passports), nil
 }
 
-func day04b(passports []passport) (string, error) {
-	return fmt.Sprint(count(func(p passport) bool { return p.valid2() }, passports)), nil
+func day04b(passports []passport) (int, error) {
+	return count(func(p passport) bool { return p.valid2() }, passports), nil
 }

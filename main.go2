@@ -36,6 +36,7 @@ var solutions = map[int]solvable{
 	1: solution[[]int]{parseInts, day01a, day01b},
 	2: solution[[]password]{parsePasswords, day02a, day02b},
 	3: solution[[][]bool]{parseTrees, day03a, day03b},
+	4: solution[[]passport]{parsePassports, day04a, day04b},
 }
 
 func run(day int) {

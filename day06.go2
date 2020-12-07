@@ -1,0 +1,52 @@
+package main
+
+import (
+	"strings"
+)
+
+type customs []map[rune]bool
+
+func parseCustomsLine(block string) map[rune]bool {
+	ret := map[rune]bool{}
+	for r := 'a'; r <= 'z'; r++ {
+		ret[r] = false
+	}
+	for _, r := range block {
+		ret[r] = true
+	}
+	return ret
+}
+
+func parseCustoms(block string) (customs, error) {
+	return Map(parseCustomsLine, nonzero(strings.Split(block, "\n"))), nil
+}
+
+func findCustoms(cs []customs, reduce func(bool, bool) bool) int {
+	total := 0
+	for _, c := range cs {
+		if len(c) == 0 {
+			continue
+		}
+		combined := MapCopy(c[0])
+		for _, m := range c[1:] {
+			for k, v := range m {
+				combined[k] = reduce(combined[k], v)
+			}
+		}
+
+		for _, v := range combined {
+			if v {
+				total++
+			}
+		}
+	}
+	return total
+}
+
+func day06a(cs []customs) (int, error) {
+	return findCustoms(cs, func(a, b bool) bool { return a || b }), nil
+}
+
+func day06b(cs []customs) (int, error) {
+	return findCustoms(cs, func(a, b bool) bool { return a && b }), nil
+}

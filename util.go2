@@ -17,6 +17,14 @@ func Keys[K comparable, V any](m map[K]V) []K {
 	return ret
 }
 
+func MapCopy[K comparable, V any](m map[K]V) map[K]V {
+	ret := map[K]V{}
+	for k, v := range m {
+		ret[k] = v
+	}
+	return ret
+}
+
 func Remove[T comparable](xs []T, x T) []T {
 	m := make([]T, 0, len(xs))
 	for _, y := range xs {
@@ -118,10 +126,20 @@ func nonzero[T comparable](xs []T) []T {
 	return filter(func(x T) bool { return x != z }, xs)
 }
 
-func lineParser[T any](f func(string) (T, error)) func(string) ([]T, error) {
-	return func(input string) ([]T, error) {
-		return MapE(f, nonzero(strings.Split(input, "\n")))
+func sepParser[T any](sep string) func(func(string) (T, error)) func(string) ([]T, error) {
+	return func(f func(string) (T, error)) func(string) ([]T, error) {
+		return func(input string) ([]T, error) {
+			return MapE(f, nonzero(strings.Split(input, sep)))
+		}
 	}
+}
+
+func lineParser[T any](f func(string) (T, error)) func(string) ([]T, error) {
+	return sepParser[T]("\n")(f)
+}
+
+func blockParser[T any](f func(string) (T, error)) func(string) ([]T, error) {
+	return sepParser[T]("\n\n")(f)
 }
 
 func max(xs ...int) int {

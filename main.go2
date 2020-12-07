@@ -39,8 +39,9 @@ var solutions = map[int]solvable{
 	1: solution[[]int]{lineParser(strconv.Atoi), day01a, day01b},
 	2: solution[[]password]{lineParser(parsePassword), day02a, day02b},
 	3: solution[[][]bool]{lineParser(parseTree), day03a, day03b},
-	4: solution[[]passport]{parsePassports, day04a, day04b},
+	4: solution[[]passport]{blockParser(parsePassport), day04a, day04b},
 	5: solution[[]int]{lineParser(parseSeat), day05a, day05b},
+	6: solution[[]customs]{blockParser(parseCustoms), day06a, day06b},
 }
 
 func run(day int) {

@@ -53,10 +53,8 @@ func parseItem(item string) Pair[string, string] {
 	return Pair[string, string]{kv[0], kv[1]}
 }
 
-func parsePassports(input string) ([]passport, error) {
-	return Map(func(block string) passport {
-		return passport(ToMap(Map(parseItem, strings.Fields(block))))
-	}, nonzero(strings.Split(input, "\n\n"))), nil
+func parsePassport(block string) (passport, error) {
+	return passport(ToMap(Map(parseItem, strings.Fields(block)))), nil
 }
 
 func day04a(passports []passport) (int, error) {

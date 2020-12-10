@@ -71,6 +71,16 @@ func MapE[T, U any](f func(T) (U, error), xs []T) ([]U, error) {
 	return ret, nil
 }
 
+func Concat[T any](xss [][]T) []T {
+	ret := make([]T, 0, len(xss))
+	for _, xs := range xss {
+		for _, x := range xs {
+			ret = append(ret, x)
+		}
+	}
+	return ret
+}
+
 func ToMap[K comparable, V any](pairs []Pair[K, V]) map[K]V {
 	ret := make(map[K]V, len(pairs))
 	for _, p := range pairs {
@@ -168,4 +178,16 @@ func min(xs ...int) int {
 		}
 	}
 	return m
+}
+
+func memoSecond[C, V any, K comparable](f func(C, K) V) func(C, K) V {
+	memo := map[K]V{}
+	return func(c C, k K) V {
+		if m, ok := memo[k]; ok {
+			return m
+		}
+		ret := f(c, k)
+		memo[k] = ret
+		return ret
+	}
 }

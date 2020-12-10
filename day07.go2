@@ -1,0 +1,88 @@
+package main
+
+import (
+	"regexp"
+	"strconv"
+	"strings"
+)
+
+type bagGraph struct {
+	edges     []*bagEdge
+	contains  map[bag][]*bagEdge
+	contained map[bag][]*bagEdge
+}
+
+func newBagGraph(edges []*bagEdge) bagGraph {
+	g := bagGraph{edges, map[bag][]*bagEdge{}, map[bag][]*bagEdge{}}
+	for _, edge := range edges {
+		g.contains[edge.container] = append(g.contains[edge.container], edge)
+		g.contained[edge.containee] = append(g.contained[edge.containee], edge)
+	}
+	return g
+}
+
+type bagEdge struct {
+	container, containee bag
+	num                  int
+}
+
+type bag string
+
+var containerRegexp = regexp.MustCompile(`^(\w+ \w+) bags contain`)
+var containeeRegexp = regexp.MustCompile(`(\d+) (\w+ \w+) bag`)
+
+func parseBagGraph(input string) (bagGraph, error) {
+	edges, err := MapE(func(line string) ([]*bagEdge, error) {
+		containerMatch := containerRegexp.FindStringSubmatch(line)
+		container := containerMatch[1]
+
+		containeeMatches := containeeRegexp.FindAllStringSubmatch(line, -1)
+		return MapE(func(match []string) (*bagEdge, error) {
+			num, err := strconv.Atoi(match[1])
+			return &bagEdge{
+				container: bag(container),
+				containee: bag(match[2]),
+				num:       num,
+			}, err
+		}, containeeMatches)
+	}, nonzero(strings.Split(input, "\n")))
+
+	return newBagGraph(Concat(edges)), err
+}
+
+func day07a(g bagGraph) (int, error) {
+	bags := map[bag]bool{}
+	q := []bag{"shiny gold"}
+	for len(q) > 0 {
+		this := q[0]
+		q = q[1:]
+		for _, edge := range g.contained[this] {
+			if bags[edge.container] {
+				continue
+			}
+			bags[edge.container] = true
+			q = append(q, edge.container)
+		}
+	}
+	return len(bags), nil
+}
+
+var totalMemo = map[bag]int{}
+
+func total(g bagGraph, bag bag) int {
+	memoed := totalMemo[bag]
+	if memoed > 0 {
+		return memoed
+	}
+
+	ret := 1
+	for _, edge := range g.contains[bag] {
+		ret += edge.num * total(g, edge.containee)
+	}
+	totalMemo[bag] = ret
+	return ret
+}
+
+func day07b(g bagGraph) (int, error) {
+	return total(g, "shiny gold") - 1, nil
+}

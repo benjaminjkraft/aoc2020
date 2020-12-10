@@ -42,6 +42,7 @@ var solutions = map[int]solvable{
 	4: solution[[]passport]{blockParser(parsePassport), day04a, day04b},
 	5: solution[[]int]{lineParser(parseSeat), day05a, day05b},
 	6: solution[[]customs]{blockParser(parseCustoms), day06a, day06b},
+	7: solution[bagGraph]{parseBagGraph, day07a, day07b},
 }
 
 func run(day int) {

@@ -179,15 +179,3 @@ func min(xs ...int) int {
 	}
 	return m
 }
-
-func memoSecond[C, V any, K comparable](f func(C, K) V) func(C, K) V {
-	memo := map[K]V{}
-	return func(c C, k K) V {
-		if m, ok := memo[k]; ok {
-			return m
-		}
-		ret := f(c, k)
-		memo[k] = ret
-		return ret
-	}
-}

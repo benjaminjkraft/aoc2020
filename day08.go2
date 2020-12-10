@@ -1,0 +1,89 @@
+package main
+
+import (
+	"fmt"
+	"strconv"
+	"strings"
+)
+
+type operation string
+
+const (
+	acc operation = "acc"
+	jmp operation = "jmp"
+	nop operation = "nop"
+)
+
+type instruction struct {
+	op  operation
+	arg int
+}
+
+func parseInstruction(line string) (instruction, error) {
+	words := strings.Fields(line)
+	if len(words) != 2 {
+		return instruction{}, fmt.Errorf("invalid instruction %v", line)
+	}
+
+	arg, err := strconv.Atoi(words[1])
+	if err != nil {
+		return instruction{}, fmt.Errorf("invalid argument %v: %w", line, err)
+	}
+
+	op := operation(words[0])
+	switch op {
+	case acc, jmp, nop:
+		return instruction{op, arg}, nil
+	default:
+		return instruction{}, fmt.Errorf("invalid operation %v", line)
+	}
+}
+
+func execute(program []instruction) (pc, a int, err error) {
+	executed := map[int]bool{}
+	for pc < len(program) && !executed[pc] {
+		executed[pc] = true
+		inst := program[pc]
+		switch inst.op {
+		case acc:
+			a += inst.arg
+		case jmp:
+			pc += inst.arg
+			continue
+		case nop:
+		default:
+			return -1, -1, fmt.Errorf("invalid instruction %v", inst)
+		}
+		pc++
+	}
+	return pc, a, nil
+}
+
+func day08a(program []instruction) (int, error) {
+	_, a, err := execute(program)
+	return a, err
+}
+
+func day08b(program []instruction) (int, error) {
+	for i, inst := range program {
+		newInst := inst
+		switch inst.op {
+		case jmp:
+			newInst.op = nop
+		case nop:
+			newInst.op = jmp
+		default:
+			continue
+		}
+		program[i] = newInst
+		pc, a, err := execute(program)
+		program[i] = inst
+
+		if err != nil {
+			return -1, err
+		} else if pc == len(program) {
+			return a, nil
+		}
+	}
+	return -1, fmt.Errorf("no solution found")
+}

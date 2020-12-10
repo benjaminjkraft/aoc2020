@@ -1,0 +1,44 @@
+package main
+
+import "fmt"
+
+const window = 25
+
+func invalid(input []int) (int, error) {
+outer:
+	for i := window; i < len(input); i++ {
+		for j := i - 25; j < i; j++ {
+			for k := j + 1; k < i; k++ {
+				if input[i] == input[j]+input[k] {
+					continue outer
+				}
+			}
+		}
+
+		return input[i], nil
+	}
+	return -1, fmt.Errorf("no solution found")
+}
+
+func day09a(input []int) (int, error) {
+	return invalid(input)
+}
+
+func day09b(input []int) (int, error) {
+	goal, err := invalid(input)
+	if err != nil {
+		return -1, err
+	}
+
+	for i := 0; i < len(input); i++ {
+		sum := input[i]
+		for j := i + 1; j < len(input); j++ {
+			sum += input[j]
+			if sum == goal {
+				return min(input[i:j+1]...) + max(input[i:j+1]...), nil
+			}
+		}
+	}
+
+	return -1, fmt.Errorf("no solution found")
+}

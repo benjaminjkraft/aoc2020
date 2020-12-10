@@ -1,0 +1,41 @@
+package main
+
+import (
+	"sort"
+)
+
+func sorted(xs []int) []int {
+	sorted := make([]int, len(xs))
+	copy(sorted, xs)
+	sort.Ints(sorted)
+	return sorted
+}
+
+func day10a(input []int) (int, error) {
+	sorted := sorted(input)
+
+	jumps := map[int]int{}
+	last := 0
+	for _, i := range sorted {
+		jumps[i-last]++
+		last = i
+	}
+
+	jumps[3]++
+
+	return jumps[1] * jumps[3], nil
+}
+
+func day10b(input []int) (int, error) {
+	sorted := append([]int{0}, sorted(input)...)
+	paths := make([]int, len(sorted))
+	paths[0] = 1
+
+	for i, next := range sorted {
+		for j := i - 1; j >= 0 && sorted[j] >= next-3; j-- {
+			paths[i] += paths[j]
+		}
+	}
+
+	return paths[len(paths)-1], nil
+}

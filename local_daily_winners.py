@@ -11,25 +11,27 @@ import sys
 
 YEAR = 2020
 
+MAX_TIME = 2 ** 63
+
 
 def _completion_time(member, day, part):
     return int(member['completion_day_level']
                .get(str(day), {})
                .get(str(part), {})
-               .get('get_star_ts', 2 ** 31 - 1))
-
-
-def _format_timedelta(td):
-    secs = int(td.total_seconds())
-    return f'{secs // 3600:02d}:{(secs // 60) % 60:02d}:{secs % 60:02d}'
+               .get('get_star_ts', MAX_TIME))
 
 
 def _format_winner(member, day, part):
     start_time = datetime.datetime(YEAR, 12, day, 5)  # midnight EST
-    time = datetime.datetime.utcfromtimestamp(
-        _completion_time(member, day, part)) - start_time
+    end_time_t = _completion_time(member, day, part)
+    if end_time_t == MAX_TIME:
+        time = 'n/a'
+    else:
+        secs = int((datetime.datetime.utcfromtimestamp(end_time_t)
+                    - start_time).total_seconds())
+        time = f'{secs // 3600:02d}:{(secs // 60) % 60:02d}:{secs % 60:02d}'
 
-    return f'{member["name"]} ({_format_timedelta(time)})'
+    return f'{member["name"]} ({time})'
 
 
 def main():

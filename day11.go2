@@ -1,0 +1,83 @@
+package main
+
+import (
+	"reflect"
+)
+
+func strtobytes(s string) ([]byte, error) { return []byte(s), nil }
+
+func neighbors1[T any](xss [][]T, i, j int) []T {
+	ret := make([]T, 0, 8)
+	for _, di := range []int{-1, 0, 1} {
+		for _, dj := range []int{-1, 0, 1} {
+			if di == 0 && dj == 0 ||
+				i+di < 0 || i+di >= len(xss) ||
+				j+dj < 0 || j+dj >= len(xss[0]) {
+				continue
+			}
+			ret = append(ret, xss[i+di][j+dj])
+		}
+	}
+	return ret
+}
+
+func neighbors2(xss [][]byte, i, j int) []byte {
+	ret := make([]byte, 0, 8)
+	for _, di := range []int{-1, 0, 1} {
+		for _, dj := range []int{-1, 0, 1} {
+			if di == 0 && dj == 0 {
+				continue
+			}
+			for k := 1; ; k++ {
+				ni := i + k*di
+				nj := j + k*dj
+				if ni < 0 || ni >= len(xss) || nj < 0 || nj >= len(xss[0]) {
+					break
+				}
+				x := xss[ni][nj]
+				if x != '.' {
+					ret = append(ret, x)
+					break
+				}
+			}
+		}
+	}
+	return ret
+}
+
+func next(grid [][]byte, neighbors func([][]byte, int, int) []byte, c int) [][]byte {
+	newGrid := Map(Copy[byte], grid)
+	for i := range grid {
+		for j := range grid[0] {
+			switch grid[i][j] {
+			case 'L':
+				if countEq('#', neighbors(grid, i, j)) == 0 {
+					newGrid[i][j] = '#'
+				}
+			case '#':
+				if countEq('#', neighbors(grid, i, j)) >= c {
+					newGrid[i][j] = 'L'
+				}
+			}
+		}
+	}
+	return newGrid
+}
+
+func lastCount(start [][]byte, neighbors func([][]byte, int, int) []byte, c int) int {
+	var prev [][]byte
+	this := start
+	for !reflect.DeepEqual(this, prev) {
+		prev = this
+		this = next(prev, neighbors, c)
+	}
+	return sum(Map(func(row []byte) int { return countEq('#', row) }, this))
+}
+
+func day11a(input [][]byte) (int, error) {
+	return lastCount(input, neighbors1[byte], 4), nil
+}
+
+func day11b(input [][]byte) (int, error) {
+	return lastCount(input, neighbors2, 5), nil
+}

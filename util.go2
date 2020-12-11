@@ -99,6 +99,10 @@ func count[T any](f func(T) bool, xs []T) int {
 	return ret
 }
 
+func countEq[T comparable](x T, xs []T) int {
+	return count(func(y T) bool { return x == y }, xs)
+}
+
 func filter[T any](f func(T) bool, xs []T) []T {
 	ret := make([]T, 0, len(xs))
 	for _, x := range xs {
@@ -179,3 +183,15 @@ func min(xs ...int) int {
 	}
 	return m
 }
+
+func sum(xs []int) int {
+	s := 0
+	for _, x := range xs {
+		s += x
+	}
+	return s
+}
+
+func id[T any](x T) T { return x }
+
+func Copy[T any](xs []T) []T { return Map[T, T](id[T], xs) }

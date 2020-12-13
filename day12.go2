@@ -1,0 +1,99 @@
+package main
+
+import (
+	"fmt"
+	"strconv"
+)
+
+type nav struct {
+	dir byte
+	val int
+}
+
+func parseNav(line string) (nav, error) {
+	val, err := strconv.Atoi(line[1:])
+	return nav{line[0], val}, err
+}
+
+func rot(x, y, r int) (nx, ny int) {
+	switch mod(r, 4) {
+	case 0:
+		return x, y
+	case 1:
+		return -y, x
+	case 2:
+		return -x, -y
+	case 3:
+		return y, -x
+	default:
+		panic(fmt.Sprintf("invalid rot: %v", r))
+	}
+}
+
+func abs(x int) int {
+	if x < 0 {
+		return -x
+	}
+	return x
+}
+
+func day12a(input []nav) (int, error) {
+	facing := 0
+	x, y := 0, 0
+	for _, nav := range input {
+		dir := nav.dir
+		if nav.dir == 'F' {
+			switch facing {
+			case 0:
+				dir = 'E'
+			case 1:
+				dir = 'N'
+			case 2:
+				dir = 'W'
+			case 3:
+				dir = 'S'
+			}
+		}
+		switch dir {
+		case 'N':
+			y += nav.val
+		case 'S':
+			y -= nav.val
+		case 'E':
+			x += nav.val
+		case 'W':
+			x -= nav.val
+		case 'L':
+			facing += nav.val / 90
+		case 'R':
+			facing -= nav.val / 90
+		}
+		facing = mod(facing, 4)
+	}
+	return abs(x) + abs(y), nil
+}
+
+func day12b(input []nav) (int, error) {
+	x, y := 0, 0
+	wx, wy := 10, 1
+	for _, nav := range input {
+		switch nav.dir {
+		case 'N':
+			wy += nav.val
+		case 'S':
+			wy -= nav.val
+		case 'E':
+			wx += nav.val
+		case 'W':
+			wx -= nav.val
+		case 'L':
+			wx, wy = rot(wx, wy, nav.val/90)
+		case 'R':
+			wx, wy = rot(wx, wy, -nav.val/90)
+		case 'F':
+			x += nav.val * wx
+			y += nav.val * wy
+		}
+	}
+	return abs(x) + abs(y), nil
+}

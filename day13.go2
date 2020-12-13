@@ -1,0 +1,59 @@
+package main
+
+import (
+	"fmt"
+	"strconv"
+	"strings"
+)
+
+type sched struct {
+	depart int
+	buses  []int
+}
+
+func parseSched(input string) (sched, error) {
+	lines := strings.Split(input, "\n")
+	depart, err := strconv.Atoi(lines[0])
+	if err != nil {
+		return sched{}, err
+	}
+	times, err := sepParser[int](",")(strconv.Atoi)(strings.ReplaceAll(lines[1], "x", "-1"))
+	return sched{depart, times}, err
+}
+
+func crt(a, b, m, n int) (c, o int) {
+	o = m * n
+	for i := 0; i < n; i++ {
+		c := a + m*i
+		if mod(c, m) == a && mod(c, n) == b {
+			return c, o
+		}
+	}
+	panic(fmt.Sprintf("no remainder for %v %v %v %v", a, b, m, n))
+}
+
+func day13a(input sched) (int, error) {
+	bestBus, bestWait := 0, max(input.buses...)
+	for _, bus := range input.buses {
+		if bus == -1 {
+			continue
+		}
+		wait := bus - mod(input.depart, bus)
+		if wait < bestWait {
+			bestBus, bestWait = bus, wait
+		}
+	}
+	return bestBus * bestWait, nil
+}
+
+func day13b(input sched) (int, error) {
+	m := 1
+	t := 0
+	for dt, bus := range input.buses {
+		if bus == -1 {
+			continue
+		}
+		t, m = crt(t, mod(-dt, bus), m, bus)
+	}
+	return t, nil
+}

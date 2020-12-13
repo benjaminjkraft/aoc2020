@@ -195,3 +195,11 @@ func sum(xs []int) int {
 func id[T any](x T) T { return x }
 
 func Copy[T any](xs []T) []T { return Map[T, T](id[T], xs) }
+
+func mod(x, m int) int {
+	r := x % m
+	if r < 0 {
+		r += m
+	}
+	return r
+}

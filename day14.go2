@@ -1,0 +1,88 @@
+package main
+
+import (
+	"fmt"
+	"regexp"
+	"strconv"
+)
+
+type maskInstruction struct {
+	mask      string
+	addr, val int
+}
+
+var (
+	maskRE = regexp.MustCompile(`^mask = ([01X]*)$`)
+	memRE  = regexp.MustCompile(`^mem\[([0-9]*)\] = ([0-9]*)$`)
+)
+
+func parseMaskInstrunction(line string) (maskInstruction, error) {
+	if m := maskRE.FindStringSubmatch(line); m != nil {
+		return maskInstruction{mask: m[1]}, nil
+	} else if m := memRE.FindStringSubmatch(line); m != nil {
+		addr, err := strconv.Atoi(m[1])
+		if err != nil {
+			return maskInstruction{}, err
+		}
+		val, err := strconv.Atoi(m[2])
+		return maskInstruction{addr: addr, val: val}, err
+	}
+	return maskInstruction{}, fmt.Errorf("invalid instruction: %v", line)
+}
+
+func valMask(mask string, val int) int {
+	for i, c := range mask {
+		e := len(mask) - i - 1
+		switch c {
+		case '0':
+			val &^= 1 << e
+		case '1':
+			val |= 1 << e
+		}
+	}
+	return val
+}
+
+func day14a(input []maskInstruction) (int, error) {
+	mem := map[int]int{}
+	mask := "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+	for _, inst := range input {
+		if inst.mask != "" {
+			mask = inst.mask
+		} else {
+			mem[inst.addr] = valMask(mask, inst.val)
+		}
+	}
+	return sum(Values(mem)), nil
+}
+
+func addrMask(mask string, addr int) []int {
+	for i, c := range mask {
+		e := len(mask) - i - 1
+		switch c {
+		case '1':
+			addr |= 1 << e
+		case 'X':
+			return append(
+				addrMask(mask[i+1:], addr&^(1<<e)),
+				addrMask(mask[i+1:], addr|(1<<e))...)
+		}
+	}
+	return []int{addr}
+
+}
+
+func day14b(input []maskInstruction) (int, error) {
+	mem := map[int]int{}
+	mask := "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+	for _, inst := range input {
+		if inst.mask != "" {
+			mask = inst.mask
+		} else {
+			for _, addr := range addrMask(mask, inst.addr) {
+				mem[addr] = inst.val
+			}
+		}
+	}
+	return sum(Values(mem)), nil
+}

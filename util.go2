@@ -164,6 +164,12 @@ func blockParser[T any](f func(string) (T, error)) func(string) ([]T, error) {
 	return sepParser[T]("\n\n")(f)
 }
 
+func commaParser[T any](f func(string) (T, error)) func(string) ([]T, error) {
+	return func(input string) ([]T, error) {
+		return MapE(f, Map(strings.TrimSpace, strings.Split(input, ",")))
+	}
+}
+
 func max(xs ...int) int {
 	if len(xs) == 0 {
 		panic("max of no args")

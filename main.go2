@@ -50,6 +50,9 @@ var solutions = map[int]solvable{
 	12: solution[[]nav]{lineParser(parseNav), day12a, day12b},
 	13: solution[sched]{parseSched, day13a, day13b},
 	14: solution[[]maskInstruction]{lineParser(parseMaskInstrunction), day14a, day14b},
+	15: solution[[]int]{commaParser(strconv.Atoi), day15a, day15b},
+	16: solution[tickets]{parseTickets, day16a, day16b},
+	17: solution[[][]bool]{lineParser(hashchars), day17a, day17b},
 }
 
 func run(day int) {

@@ -1,0 +1,137 @@
+package main
+
+import (
+	"fmt"
+	"regexp"
+	"strconv"
+	"strings"
+)
+
+type tickets struct {
+	rules  []rule
+	mine   []int
+	others [][]int
+	valid  map[int][]int
+}
+
+type rule struct {
+	name   string
+	ranges [][2]int
+}
+
+var (
+	nameRE  = regexp.MustCompile(`^([^:]*):`)
+	rangeRE = regexp.MustCompile(` (\d*)-(\d*)( |$)`)
+)
+
+func parseTickets(input string) (tickets, error) {
+	var tickets tickets
+	lines := strings.Split(input, "\n")
+	i := 0
+	for ; i < len(lines); i++ {
+		line := lines[i]
+		if line == "" {
+			break
+		}
+		name := nameRE.FindString(line)
+		if name == "" {
+			return tickets, fmt.Errorf("missing field-name: %v", line)
+		}
+		ranges, err := MapE(func(match []string) ([2]int, error) {
+			p, err := MapE(strconv.Atoi, match[1:3])
+			return [2]int{p[0], p[1]}, err
+		}, rangeRE.FindAllStringSubmatch(line, -1))
+		if err != nil {
+			return tickets, err
+		}
+
+		tickets.rules = append(tickets.rules, rule{name, ranges})
+	}
+
+	i++ // blank line
+	i++ // header line
+	ticket, err := commaParser(strconv.Atoi)(lines[i])
+	if err != nil {
+		return tickets, err
+	}
+	tickets.mine = ticket
+	i++
+
+	i++ // blank line
+	i++ // header line
+	for ; i < len(lines); i++ {
+		line := lines[i]
+		if line == "" {
+			break
+		}
+		ticket, err := commaParser(strconv.Atoi)(lines[i])
+		if err != nil {
+			return tickets, err
+		}
+		tickets.others = append(tickets.others, ticket)
+	}
+
+	tickets.valid = map[int][]int{}
+	for i, rule := range tickets.rules {
+		for _, r := range rule.ranges {
+			for j := r[0]; j <= r[1]; j++ {
+				tickets.valid[j] = append(tickets.valid[j], i)
+			}
+		}
+	}
+
+	return tickets, nil
+}
+
+func day16a(input tickets) (int, error) {
+	return sum(Map(func(t []int) int {
+		return sum(filter(func(v int) bool { return input.valid[v] == nil }, t))
+	}, input.others)), nil
+}
+
+func day16b(input tickets) (int, error) {
+	possible := map[int]map[int]bool{} // ticket index -> rule index -> valid
+	for i := range input.rules {
+		possible[i] = map[int]bool{}
+		for j := range input.rules {
+			possible[i][j] = true
+		}
+	}
+	for _, ticket := range input.others {
+		if Any(func(v int) bool { return input.valid[v] == nil }, ticket) {
+			continue // invalid ticket
+		}
+
+		for i := range input.rules {
+			valid := input.valid[ticket[i]]
+			for _, k := range Keys(possible[i]) {
+				if !Contains(valid, k) {
+					delete(possible[i], k)
+				}
+			}
+		}
+	}
+
+	mapping := map[int]int{} // ticket index -> rule index
+	for len(mapping) < len(possible) {
+		for k, v := range possible {
+			if len(v) != 1 {
+				continue
+			}
+			vv := Keys(v)[0]
+			mapping[k] = vv
+			for _, v := range possible {
+				delete(v, vv)
+			}
+		}
+	}
+
+	p := 1
+	for t, r := range mapping {
+		if strings.HasPrefix(input.rules[r].name, "departure ") {
+			p *= input.mine[t]
+		}
+	}
+
+	return p, nil
+}

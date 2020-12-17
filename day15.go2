@@ -1,0 +1,30 @@
+package main
+
+func play(start []int, length int) int {
+	history := map[int]int{}
+	turn := len(start)
+	next := start[turn-1]
+	for i, num := range start[:turn-1] {
+		history[num] = i + 1
+	}
+
+	for turn < length {
+		last, ok := history[next]
+		history[next] = turn
+		if !ok {
+			next = 0
+		} else {
+			next = turn - last
+		}
+		turn++
+	}
+	return next
+}
+
+func day15a(input []int) (int, error) {
+	return play(input, 2020), nil
+}
+
+func day15b(input []int) (int, error) {
+	return play(input, 30000000), nil
+}

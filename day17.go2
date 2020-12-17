@@ -1,0 +1,195 @@
+package main
+
+import "fmt"
+
+func hashchars(input string) ([]bool, error) {
+	return Map(func(b byte) bool { return b == '#' }, []byte(input)), nil
+}
+
+func grid3(x, y, z int) [][][]bool {
+	ret := make([][][]bool, x)
+	for i := 0; i < x; i++ {
+		ret[i] = make([][]bool, y)
+		for j := 0; j < y; j++ {
+			ret[i][j] = make([]bool, z)
+		}
+	}
+	return ret
+}
+
+func lift3(input [][]bool) [][][]bool {
+	g := grid3(len(input)+12, len(input[0])+12, 13)
+	for i, row := range input {
+		for j, v := range row {
+			g[i+6][j+6][6] = v
+		}
+	}
+	return g
+}
+
+func neighbors3[T any](g [][][]T, i, j, k int) []T {
+	var ret []T
+	for di := -1; di <= 1; di++ {
+		for dj := -1; dj <= 1; dj++ {
+			for dk := -1; dk <= 1; dk++ {
+				ni := i + di
+				nj := j + dj
+				nk := k + dk
+				if di == 0 && dj == 0 && dk == 0 ||
+					ni < 0 || nj < 0 || nk < 0 ||
+					ni >= len(g) || nj >= len(g[0]) || nk >= len(g[0][0]) {
+					continue
+				}
+
+				ret = append(ret, g[ni][nj][nk])
+			}
+		}
+	}
+	return ret
+}
+
+func conway3(g [][][]bool) [][][]bool {
+	ret := grid3(len(g), len(g[0]), len(g[0][0]))
+	for i, plane := range g {
+		for j, row := range plane {
+			for k, cell := range row {
+				active := countEq(true, neighbors3(g, i, j, k))
+				ret[i][j][k] = active == 3 || cell && active == 2
+			}
+		}
+	}
+	return ret
+}
+
+func print3(g [][][]bool) {
+	for i := range g {
+		for k := range g[0][0] {
+			for j := range g[0] {
+				if g[i][j][k] {
+					fmt.Print("#")
+				} else {
+					fmt.Print(".")
+				}
+			}
+			fmt.Print(" ")
+		}
+		fmt.Println()
+	}
+}
+
+func day17a(input [][]bool) (int, error) {
+	g := lift3(input)
+	// print3(g)
+	for i := 0; i < 6; i++ {
+		g = conway3(g)
+		// fmt.Println()
+		// print3(g)
+	}
+	return sum(Map(func(plane [][]bool) int {
+		return sum(Map(func(row []bool) int {
+			return countEq(true, row)
+		}, plane))
+	}, g)), nil
+}
+
+func grid4(x, y, z, w int) [][][][]bool {
+	ret := make([][][][]bool, x)
+	for i := 0; i < x; i++ {
+		ret[i] = make([][][]bool, y)
+		for j := 0; j < y; j++ {
+			ret[i][j] = make([][]bool, z)
+			for k := 0; k < z; k++ {
+				ret[i][j][k] = make([]bool, w)
+			}
+		}
+	}
+	return ret
+}
+
+func lift4(input [][]bool) [][][][]bool {
+	g := grid4(len(input)+12, len(input[0])+12, 13, 13)
+	for i, row := range input {
+		for j, v := range row {
+			g[i+6][j+6][6][6] = v
+		}
+	}
+	return g
+}
+
+func neighbors4[T any](g [][][][]T, i, j, k, l int) []T {
+	var ret []T
+	for di := -1; di <= 1; di++ {
+		for dj := -1; dj <= 1; dj++ {
+			for dk := -1; dk <= 1; dk++ {
+				for dl := -1; dl <= 1; dl++ {
+					ni := i + di
+					nj := j + dj
+					nk := k + dk
+					nl := l + dl
+					if di == 0 && dj == 0 && dk == 0 && dl == 0 ||
+						ni < 0 || nj < 0 || nk < 0 || nl < 0 ||
+						ni >= len(g) || nj >= len(g[0]) || nk >= len(g[0][0]) || nl >= len(g[0][0][0]) {
+						continue
+					}
+
+					ret = append(ret, g[ni][nj][nk][nl])
+				}
+			}
+		}
+	}
+	return ret
+}
+
+func conway4(g [][][][]bool) [][][][]bool {
+	ret := grid4(len(g), len(g[0]), len(g[0][0]), len(g[0][0][0]))
+	for i, space := range g {
+		for j, plane := range space {
+			for k, row := range plane {
+				for l, cell := range row {
+					active := countEq(true, neighbors4(g, i, j, k, l))
+					ret[i][j][k][l] = active == 3 || cell && active == 2
+				}
+			}
+		}
+	}
+	return ret
+}
+
+func print4(g [][][][]bool) {
+	for k := range g[0][0] {
+		for i := range g {
+			for l := range g[0][0][0] {
+				for j := range g[0] {
+					if g[i][j][k][l] {
+						fmt.Print("#")
+					} else {
+						fmt.Print(".")
+					}
+				}
+				fmt.Print(" ")
+			}
+			fmt.Println()
+		}
+		fmt.Println()
+	}
+}
+
+func day17b(input [][]bool) (int, error) {
+	g := lift4(input)
+	// fmt.Println()
+	// fmt.Println()
+	// print4(g)
+	for i := 0; i < 6; i++ {
+		g = conway4(g)
+		// fmt.Println()
+		// fmt.Println()
+		// print4(g)
+	}
+	return sum(Map(func(space [][][]bool) int {
+		return sum(Map(func(plane [][]bool) int {
+			return sum(Map(func(row []bool) int {
+				return countEq(true, row)
+			}, plane))
+		}, space))
+	}, g)), nil
+}

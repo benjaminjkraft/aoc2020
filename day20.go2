@@ -139,23 +139,13 @@ func layout(grids map[gridNum][][]bool) [][]gridNum {
 	// convert that into grid-connections
 	connects := map[gridNum][]gridNum{}
 	for num, grid := range grids {
-		var others []gridNum
-		var otherEdges []edgeNum
-		// iterate over the edges (we can skip the reversed ones) to figure
-		// out which grids we are connected to (and which edges are making the
-		// connection).
 		for _, edge := range edgeNums(grid)[:4] {
-			newOthers := Remove(edgePairs[edge], num)
-			others = append(others, newOthers...)
-			if len(newOthers) > 0 {
-				otherEdges = append(otherEdges, edge)
-			}
+			connects[num] = append(connects[num], Remove(edgePairs[edge], num)...)
 		}
-		connects[num] = others
 
 		// if we have only 2 grid connections, and haven't yet found a
 		// corner, put us in the top-left
-		if len(others) == 2 && ret[0][0] == 0 {
+		if len(connects[num]) == 2 && ret[0][0] == 0 {
 			ret[0][0] = num
 		}
 	}
@@ -163,7 +153,7 @@ func layout(grids map[gridNum][][]bool) [][]gridNum {
 		panic("couldn't find corner")
 	}
 
-	// now fix up the orientation of said conrner (can't do this in the
+	// now fix up the orientation of said corner (can't do this in the
 	// loop since it mutates grids)
 	topLeft := grids[ret[0][0]]
 	downRight := filter(func(e edgeNum) bool { return len(edgePairs[e]) == 2 }, edgeNums(topLeft)[:4])
@@ -182,7 +172,7 @@ func layout(grids map[gridNum][][]bool) [][]gridNum {
 		ret[0][1]: true,
 	}
 
-	// now fill in everything else.
+	// now draw the rest of the owl.
 	for x := 0; x < n; x++ {
 		for y := 0; y < n; y++ {
 			if x == 0 && y < 2 {
@@ -217,6 +207,7 @@ func layout(grids map[gridNum][][]bool) [][]gridNum {
 				grids[ret[x][y]] = matchLeftEdge(grids[ret[x][y]], grids[left])
 
 			} else if x > 0 {
+				// same here, but with the coordinates swapped)
 				up := ret[x-1][y]
 
 				us := RemoveAll(connects[up], used)

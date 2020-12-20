@@ -1,0 +1,138 @@
+package main
+
+import (
+	"fmt"
+	"regexp"
+	"strconv"
+	"strings"
+)
+
+type expr interface {
+	eval() int
+}
+
+type numExpr int
+
+func (e numExpr) eval() int { return int(e) }
+
+type binExpr struct {
+	left, right expr
+	op          op
+}
+
+func (e binExpr) eval() int {
+	switch e.op {
+	case add:
+		return e.left.eval() + e.right.eval()
+	case multiply:
+		return e.left.eval() * e.right.eval()
+	default:
+		panic(fmt.Sprintf("invalid op: %v", e.op))
+	}
+}
+
+type op string
+
+const (
+	add      op = "+"
+	multiply op = "*"
+)
+
+type parenExpr struct{ expr }
+
+var sepRE = regexp.MustCompile("([+*()])")
+
+func parseExpr(line string) (expr, error) {
+	toks := strings.Fields(sepRE.ReplaceAllString(line, " $1 "))
+
+	var stack []interface{}
+	push := func(x interface{}) {
+		stack = append(stack, x)
+	}
+	pop := func() interface{} {
+		l := len(stack)
+		top := stack[l-1]
+		stack = stack[:l-1]
+		return top
+	}
+	clean := func() {
+		l := len(stack)
+		if l < 3 {
+			return
+		}
+		right, ok := stack[l-1].(expr)
+		if !ok {
+			return
+		}
+		op, ok := stack[l-2].(op)
+		if !ok {
+			return
+		}
+		left, ok := stack[l-3].(expr)
+		if !ok {
+			return
+		}
+
+		pop()
+		pop()
+		pop()
+
+		push(binExpr{left, right, op})
+	}
+
+	for _, tok := range toks {
+		switch tok {
+		case "(":
+			push(tok)
+		case ")":
+			e := pop().(expr)
+			open := pop().(string)
+			if open != "(" {
+				return nil, fmt.Errorf("bad expr: expected ( but stack is %v", stack)
+			}
+			push(parenExpr{e})
+		case "+", "*":
+			push(op(tok))
+		default:
+			num, err := strconv.Atoi(tok)
+			if err != nil {
+				return nil, err
+			}
+			push(numExpr(num))
+		}
+		clean()
+	}
+
+	if len(stack) != 1 {
+		return nil, fmt.Errorf("bad expr: final stack is %v", stack)
+	}
+	val, ok := pop().(expr)
+	if !ok {
+		return nil, fmt.Errorf("bad expr: final value is %v", val)
+	}
+	return val, nil
+}
+
+func day18a(input []expr) (int, error) {
+	return sum(Map(func(e expr) int { return e.eval() }, input)), nil
+}
+
+func reassociate(e expr) expr {
+	switch e := e.(type) {
+	case numExpr:
+		return e
+	case parenExpr:
+		return parenExpr{reassociate(e.expr)}
+	case binExpr:
+		if left, ok := e.left.(binExpr); ok && e.op == add {
+			return reassociate(binExpr{left.left, binExpr{left.right, e.right, e.op}, left.op})
+		}
+		return binExpr{reassociate(e.left), reassociate(e.right), e.op}
+	default:
+		panic(fmt.Sprintf("unexpected expr type: %T", e))
+	}
+}
+
+func day18b(input []expr) (int, error) {
+	return sum(Map(func(e expr) int { return reassociate(e).eval() }, input)), nil
+}

@@ -33,6 +33,33 @@ func MapCopy[K comparable, V any](m map[K]V) map[K]V {
 	return ret
 }
 
+func MapBy[K comparable, V any](vs []V, key func(V) K) map[K]V {
+	ret := map[K]V{}
+	for _, v := range vs {
+		ret[key(v)] = v
+	}
+	return ret
+}
+
+func MapBySlice[K comparable, V any](vs []V, key func(V) K) map[K][]V {
+	ret := map[K][]V{}
+	for _, v := range vs {
+		k := key(v)
+		ret[k] = append(ret[k], v)
+	}
+	return ret
+}
+
+func MapBySlices[K comparable, V any](vs []V, keys func(V) []K) map[K][]V {
+	ret := map[K][]V{}
+	for _, v := range vs {
+		for _, k := range keys(v) {
+			ret[k] = append(ret[k], v)
+		}
+	}
+	return ret
+}
+
 func Remove[T comparable](xs []T, x T) []T {
 	m := make([]T, 0, len(xs))
 	for _, y := range xs {
@@ -198,6 +225,33 @@ func min(xs ...int) int {
 	return m
 }
 
+func minBy[T any](key func(T) int, xs []T) T {
+	if len(xs) == 0 {
+		panic("min of no args")
+	}
+
+	m := xs[0]
+	b := key(xs[0])
+	for _, x := range xs[1:] {
+		k := key(x)
+		if k < b {
+			m = x
+			b = k
+		}
+	}
+	return m
+}
+
+func RemoveAll[T comparable](xs []T, s map[T]bool) []T {
+	m := make([]T, 0, len(xs))
+	for _, x := range xs {
+		if !s[x] {
+			m = append(m, x)
+		}
+	}
+	return m
+}
+
 func sum(xs []int) int {
 	s := 0
 	for _, x := range xs {
@@ -208,7 +262,8 @@ func sum(xs []int) int {
 
 func id[T any](x T) T { return x }
 
-func Copy[T any](xs []T) []T { return Map[T, T](id[T], xs) }
+func Copy[T any](xs []T) []T      { return Map[T, T](id[T], xs) }
+func Copy2[T any](xs [][]T) [][]T { return Map[[]T, []T](Copy[T], xs) }
 
 func mod(x, m int) int {
 	r := x % m
@@ -216,4 +271,60 @@ func mod(x, m int) int {
 		r += m
 	}
 	return r
+}
+
+func reversed[T any](xs []T) []T {
+	ret := make([]T, len(xs))
+	for i, x := range xs {
+		ret[len(xs)-i-1] = x
+	}
+	return ret
+}
+
+func uniq[T comparable](xs []T) []T {
+	if len(xs) < 2 {
+		return xs
+	}
+	ret := []T{xs[0]}
+	for _, x := range xs[1:] {
+		if x != ret[len(ret)-1] {
+			ret = append(ret, x)
+		}
+	}
+	return ret
+}
+
+func intersection[T comparable](xs, ys []T) []T {
+	var ret []T
+	for _, x := range xs {
+		for _, y := range ys {
+			if x == y && !Contains(ret, x) {
+				ret = append(ret, x)
+			}
+		}
+	}
+	return ret
+}
+
+func Make2[T any](m, n int) [][]T {
+	return Map(func(_ struct{}) []T { return make([]T, n) }, make([]struct{}, m))
+}
+
+func transpose[T any](xss [][]T) [][]T {
+	ret := Make2[T](len(xss[0]), len(xss))
+	for i, xs := range xss {
+		for j, x := range xs {
+			ret[j][i] = x
+		}
+	}
+	return ret
+}
+
+func Index[T comparable](xs []T, x T) int {
+	for i, y := range xs {
+		if x == y {
+			return i
+		}
+	}
+	return -1
 }

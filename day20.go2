@@ -1,0 +1,332 @@
+package main
+
+import (
+	"fmt"
+	"math"
+	"sort"
+	"strings"
+)
+
+func parseGrids(input string) (map[int][][]bool, error) {
+	ret := map[int][][]bool{}
+	for _, block := range nonzero(strings.Split(input, "\n\n")) {
+		i := strings.Index(block, "\n")
+		if i == -1 {
+			return nil, fmt.Errorf("no header for block %v", block)
+		}
+		var num int
+		_, err := fmt.Sscanf(block[:i], "Tile %v:", &num)
+		if err != nil {
+			return nil, err
+		}
+
+		ret[num], err = lineParser(hashchars)(block[i+1:])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return ret, nil
+}
+
+func btoi(bs []bool) int {
+	ret := 0
+	for i, b := range bs {
+		if b {
+			ret += 1 << i
+		}
+	}
+	return ret
+}
+
+func col(grid [][]bool, i int) []bool {
+	return Map(func(xs []bool) bool { return xs[i] }, grid)
+}
+
+func edgeNums(grid [][]bool) []int {
+	l := len(grid)
+	edges := [][]bool{grid[0], grid[l-1], col(grid, 0), col(grid, l-1)}
+
+	return Map(btoi, append(edges, Map(reversed[bool], edges)...))
+}
+
+func layout(grids map[int][][]bool) [][]int {
+	n := int(math.Sqrt(float64(len(grids))))
+	if n*n != len(grids) {
+		panic("non-square # of grids")
+	}
+	ret := Make2[int](n, n)
+
+	edgePairs := MapBySlices(Keys(grids), func(n int) []int { return edgeNums(grids[n]) })
+
+	connects := map[int][]int{}
+	for num, grid := range grids {
+		var others []int
+		var downRight []int
+		for i, edge := range edgeNums(grid) {
+			newOthers := Remove(edgePairs[edge], num)
+			others = append(others, newOthers...)
+			if len(newOthers) > 0 && i < 4 {
+				downRight = append(downRight, edge)
+			}
+		}
+		sort.Ints(others)
+		others = uniq(others)
+		connects[num] = others
+		if len(others) == 2 {
+			ret[0][0] = num
+
+			edges := edgeNums(grid)
+			downI := Index(edges, downRight[0])
+			rightI := Index(edges, downRight[1])
+			switch downI % 4 {
+			case 0:
+				switch rightI % 2 {
+				case 0:
+					grids[ret[0][0]] = Map(reversed[bool], reversed(grid))
+				case 1:
+					grids[ret[0][0]] = reversed(grid)
+				}
+			case 1:
+				switch rightI % 2 {
+				case 0:
+					grids[ret[0][0]] = Map(reversed[bool], grid)
+				case 1:
+				}
+			case 2:
+				switch rightI % 2 {
+				case 0:
+					grids[ret[0][0]] = Map(reversed[bool], reversed(transpose(grid)))
+				case 1:
+					grids[ret[0][0]] = reversed(transpose(grid))
+				}
+			case 3:
+				switch rightI % 2 {
+				case 0:
+					grids[ret[0][0]] = Map(reversed[bool], transpose(grid))
+				case 1:
+					grids[ret[0][0]] = transpose(grid)
+				}
+			}
+
+			ret[0][1] = Remove(edgePairs[downRight[1]], num)[0]
+		}
+	}
+	if ret[0][0] == 0 {
+		panic("couldn't find corner")
+	}
+
+	g := grids[ret[0][1]]
+	edges := edgeNums(g)
+	leftI := Index(edges, btoi(col(grids[ret[0][0]], len(g)-1)))
+	switch leftI {
+	case 0:
+		grids[ret[0][1]] = transpose(g)
+	case 1:
+		grids[ret[0][1]] = Map(reversed[bool], transpose(g))
+	case 2:
+		grids[ret[0][1]] = g
+	case 3:
+		grids[ret[0][1]] = Map(reversed[bool], g)
+	case 4:
+		grids[ret[0][1]] = reversed(transpose(g))
+	case 5:
+		grids[ret[0][1]] = reversed(Map(reversed[bool], transpose(g)))
+	case 6:
+		grids[ret[0][1]] = reversed(g)
+	case 7:
+		grids[ret[0][1]] = reversed(Map(reversed[bool], g))
+	default:
+		panic("invalid index")
+	}
+
+	used := map[int]bool{
+		ret[0][0]: true,
+		ret[0][1]: true,
+	}
+
+	for x := 0; x < n; x++ {
+		for y := 0; y < n; y++ {
+			if x == 0 && y < 2 {
+				continue
+			}
+
+			if x > 0 && y > 0 {
+				up := ret[x-1][y]
+				left := ret[x][y-1]
+
+				us := RemoveAll(intersection(connects[left], connects[up]), used)
+				if len(us) != 1 {
+					panic("impossible grid")
+				}
+
+				ret[x][y] = us[0]
+
+				g := grids[ret[x][y]]
+				edges := edgeNums(g)
+				upI := Index(edges, btoi(grids[up][len(g)-1]))
+				switch upI {
+				case 0:
+				case 1:
+					grids[ret[x][y]] = reversed(g)
+				case 2:
+					grids[ret[x][y]] = transpose(g)
+				case 3:
+					grids[ret[x][y]] = reversed(transpose(g))
+				case 4:
+					grids[ret[x][y]] = Map(reversed[bool], g)
+				case 5:
+					grids[ret[x][y]] = Map(reversed[bool], reversed(g))
+				case 6:
+					grids[ret[x][y]] = Map(reversed[bool], transpose(g))
+				case 7:
+					grids[ret[x][y]] = Map(reversed[bool], reversed(transpose(g)))
+				default:
+					panic(fmt.Sprintf("invalid index: %v", upI))
+				}
+
+			} else if y > 0 {
+				left := ret[x][y-1]
+
+				us := RemoveAll(connects[left], used)
+				if len(us) == 0 {
+					panic("impossible grid")
+				}
+
+				ret[x][y] = minBy(func(num int) int { return len(connects[num]) }, us)
+
+				g := grids[ret[x][y]]
+				edges := edgeNums(g)
+				leftI := Index(edges, btoi(col(grids[left], len(g)-1)))
+				switch leftI {
+				case 0:
+					grids[ret[x][y]] = transpose(g)
+				case 1:
+					grids[ret[x][y]] = Map(reversed[bool], transpose(g))
+				case 2:
+					grids[ret[x][y]] = g
+				case 3:
+					grids[ret[x][y]] = Map(reversed[bool], g)
+				case 4:
+					grids[ret[x][y]] = reversed(transpose(g))
+				case 5:
+					grids[ret[x][y]] = reversed(Map(reversed[bool], transpose(g)))
+				case 6:
+					grids[ret[x][y]] = reversed(g)
+				case 7:
+					grids[ret[x][y]] = reversed(Map(reversed[bool], g))
+				default:
+					panic(fmt.Sprintf("invalid index: %v", leftI))
+				}
+			} else if x > 0 {
+				up := ret[x-1][y]
+
+				us := RemoveAll(connects[up], used)
+				if len(us) == 0 {
+					panic("impossible grid")
+				}
+
+				ret[x][y] = minBy(func(num int) int { return len(connects[num]) }, us)
+
+				g := grids[ret[x][y]]
+				edges := edgeNums(g)
+				upI := Index(edges, btoi(grids[up][len(g)-1]))
+				switch upI {
+				case 0:
+				case 1:
+					grids[ret[x][y]] = reversed(g)
+				case 2:
+					grids[ret[x][y]] = transpose(g)
+				case 3:
+					grids[ret[x][y]] = reversed(transpose(g))
+				case 4:
+					grids[ret[x][y]] = Map(reversed[bool], g)
+				case 5:
+					grids[ret[x][y]] = Map(reversed[bool], reversed(g))
+				case 6:
+					grids[ret[x][y]] = Map(reversed[bool], transpose(g))
+				case 7:
+					grids[ret[x][y]] = Map(reversed[bool], reversed(transpose(g)))
+				default:
+					panic(fmt.Sprintf("invalid index: %v", upI))
+				}
+
+			}
+			used[ret[x][y]] = true
+		}
+	}
+
+	return ret
+}
+
+func stitch(grids map[int][][]bool, layout [][]int) [][]bool {
+	n := len(layout)
+	k := len(grids[layout[0][0]]) - 2
+	ret := Make2[bool](n*k, n*k)
+	for x, row := range layout {
+		for y, num := range row {
+			for i, grow := range grids[num][1 : k+1] {
+				for j, cell := range grow[1 : k+1] {
+					ret[x*k+i][y*k+j] = cell
+				}
+			}
+		}
+	}
+	return ret
+}
+
+func day20a(grids map[int][][]bool) (int, error) {
+	l := layout(grids)
+	n := len(l)
+	return l[0][0] * l[0][n-1] * l[n-1][0] * l[n-1][n-1], nil
+}
+
+var seamonster = [][2]int{
+	{1, 0}, {2, 1}, {2, 4}, {1, 5},
+	{1, 6}, {2, 7}, {2, 10}, {1, 11},
+	{1, 12}, {2, 13}, {2, 16}, {1, 17},
+	{0, 18}, {1, 18}, {1, 19},
+}
+
+var seamonsters = [][][2]int{
+	seamonster,
+	Map(func(xy [2]int) [2]int { return [2]int{xy[0], 19 - xy[1]} }, seamonster),
+	Map(func(xy [2]int) [2]int { return [2]int{2 - xy[0], 19 - xy[1]} }, seamonster),
+	Map(func(xy [2]int) [2]int { return [2]int{2 - xy[0], xy[1]} }, seamonster),
+	Map(func(xy [2]int) [2]int { return [2]int{xy[1], xy[0]} }, seamonster),
+	Map(func(xy [2]int) [2]int { return [2]int{19 - xy[1], xy[0]} }, seamonster),
+	Map(func(xy [2]int) [2]int { return [2]int{19 - xy[1], 2 - xy[0]} }, seamonster),
+	Map(func(xy [2]int) [2]int { return [2]int{xy[1], 2 - xy[0]} }, seamonster),
+}
+
+func print2(g [][]bool) {
+	for i := range g {
+		for j := range g[0] {
+			if g[i][j] {
+				fmt.Print("#")
+			} else {
+				fmt.Print(".")
+			}
+		}
+		fmt.Println()
+	}
+}
+
+func day20b(grids map[int][][]bool) (int, error) {
+	grid := stitch(grids, layout(grids))
+	nonmonsters := Copy2(grid)
+	for i := range grid {
+		for j := range grid[0] {
+			for _, seamonster := range seamonsters {
+				if All(func(xy [2]int) bool {
+					x, y := i+xy[0], j+xy[1]
+					return x < len(grid) && y < len(grid[0]) && grid[x][y]
+				}, seamonster) {
+					for _, xy := range seamonster {
+						nonmonsters[i+xy[0]][j+xy[1]] = false
+					}
+				}
+			}
+		}
+	}
+	return sum(Map(func(row []bool) int { return count(id[bool], row) }, nonmonsters)), nil
+}

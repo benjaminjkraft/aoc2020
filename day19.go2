@@ -1,0 +1,151 @@
+package main
+
+import (
+	"fmt"
+	"strconv"
+	"strings"
+)
+
+type messagesAndRules struct {
+	rules    map[int]msgRule
+	messages []string
+}
+
+type msgRule struct {
+	num      int
+	subrules [][]int
+	char     byte
+}
+
+func parseMessagesAndRules(input string) (messagesAndRules, error) {
+	parts := strings.Split(input, "\n\n")
+	messages := nonzero(strings.Split(parts[1], "\n"))
+	rules, err := lineParser(parseRule)(parts[0])
+
+	return messagesAndRules{
+		rules:    MapBy(rules, func(r msgRule) int { return r.num }),
+		messages: messages,
+	}, err
+}
+
+func parseRule(line string) (msgRule, error) {
+	i := strings.Index(line, ": ")
+	if i == -1 {
+		return msgRule{}, fmt.Errorf("invalid rule: %v", line)
+	}
+	num, err := strconv.Atoi(line[:i])
+	if err != nil {
+		return msgRule{}, err
+	}
+	rest := line[i+2:]
+	if rest[0] == '"' {
+		if len(rest) != 3 || rest[2] != '"' {
+			return msgRule{}, fmt.Errorf("invalid rule: %v", line)
+		}
+		return msgRule{num: num, char: rest[1]}, nil
+	}
+
+	parts := strings.Split(rest, " | ")
+	subrules, err := MapE(func(part string) ([]int, error) {
+		return MapE(strconv.Atoi, strings.Split(part, " "))
+	}, parts)
+	return msgRule{num: num, subrules: subrules}, err
+}
+
+func length(rules map[int]msgRule) func(int) int {
+	return func(start int) int {
+		rule := rules[start]
+		if rule.char != 0 {
+			return 1
+		}
+		return sum(Map(length(rules), rule.subrules[0]))
+	}
+}
+
+func matches(rules map[int]msgRule, part2 bool) func(string) bool {
+	memo := map[Pair[string, int]]bool{}
+	var matchesAt func(message string, start int) bool
+	matchesAt = func(message string, start int) bool {
+		key := Pair[string, int]{message, start}
+		if ret, ok := memo[key]; ok {
+			return ret
+		}
+
+		rule := rules[start]
+		if rule.char != 0 {
+			ret := len(message) == 1 && message[0] == rule.char
+			memo[key] = ret
+			return ret
+		}
+
+		for _, subrule := range rule.subrules {
+			if part2 && start == 8 {
+				// 8: 42 \ 42 8 --> 8: 42+
+				l := length(rules)(42)
+				if len(message)%l != 0 {
+					memo[key] = false
+					return false
+				}
+				for i := 0; i < len(message); i += l {
+					if !matchesAt(message[i:i+l], 42) {
+						memo[key] = false
+						return false
+					}
+				}
+				return true
+			}
+
+			if part2 && start == 11 {
+				// 11: 42 31 | 42 11 31 --> 11: 42^n 31^n
+				l42 := length(rules)(42)
+				l31 := length(rules)(31)
+				l := l42 + l31
+				if len(message)%l != 0 {
+					memo[key] = false
+					return false
+				}
+				for i := 0; i < len(message)/l; i++ {
+					if !matchesAt(message[i*l42:i*l42+l42], 42) ||
+						!matchesAt(message[len(message)-i*l31-l31:len(message)-i*l31], 31) {
+						memo[key] = false
+						return false
+					}
+				}
+				return true
+			}
+			switch len(subrule) {
+			case 1:
+				if matchesAt(message, subrule[0]) {
+					memo[key] = true
+					return true
+				}
+				continue
+
+			case 2:
+				for i := 1; i < len(message); i++ {
+					if matchesAt(message[:i], subrule[0]) && matchesAt(message[i:], subrule[1]) {
+						memo[key] = true
+						return true
+					}
+				}
+
+			default:
+				panic(fmt.Sprintf("not implemented: %v", rule))
+			}
+		}
+		memo[key] = false
+		return false
+	}
+
+	return func(message string) bool {
+		return matchesAt(message, 0)
+	}
+}
+
+func day19a(input messagesAndRules) (int, error) {
+	return count(matches(input.rules, false), input.messages), nil
+}
+
+func day19b(input messagesAndRules) (int, error) {
+	return count(matches(input.rules, true), input.messages), nil
+}

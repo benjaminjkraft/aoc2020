@@ -3,18 +3,23 @@ package main
 import (
 	"fmt"
 	"math"
-	"sort"
 	"strings"
 )
 
-func parseGrids(input string) (map[int][][]bool, error) {
-	ret := map[int][][]bool{}
+type gridNum int
+
+// we track edges as numbers (which are much more hashable than []bool) --
+// basically we just read the bools as binary
+type edgeNum int
+
+func parseGrids(input string) (map[gridNum][][]bool, error) {
+	ret := map[gridNum][][]bool{}
 	for _, block := range nonzero(strings.Split(input, "\n\n")) {
 		i := strings.Index(block, "\n")
 		if i == -1 {
 			return nil, fmt.Errorf("no header for block %v", block)
 		}
-		var num int
+		var num gridNum
 		_, err := fmt.Sscanf(block[:i], "Tile %v:", &num)
 		if err != nil {
 			return nil, err
@@ -28,122 +33,156 @@ func parseGrids(input string) (map[int][][]bool, error) {
 	return ret, nil
 }
 
-func btoi(bs []bool) int {
+func edgeToNum(bs []bool) edgeNum {
 	ret := 0
 	for i, b := range bs {
 		if b {
 			ret += 1 << i
 		}
 	}
-	return ret
+	return edgeNum(ret)
 }
 
-func col(grid [][]bool, i int) []bool {
-	return Map(func(xs []bool) bool { return xs[i] }, grid)
-}
-
-func edgeNums(grid [][]bool) []int {
+func edgeNums(grid [][]bool) []edgeNum {
 	l := len(grid)
-	edges := [][]bool{grid[0], grid[l-1], col(grid, 0), col(grid, l-1)}
-
-	return Map(btoi, append(edges, Map(reversed[bool], edges)...))
+	col := func(i int) []bool { return Map(func(xs []bool) bool { return xs[i] }, grid) }
+	edges := [][]bool{grid[0], grid[l-1], col(0), col(l - 1)}
+	return Map(edgeToNum, append(edges, Map(reversed[bool], edges)...))
 }
 
-func layout(grids map[int][][]bool) [][]int {
+// matchTopEdge returns the correctly-oriented version of g, given up is above
+// it
+func matchTopEdge(g, up [][]bool) [][]bool {
+	i := Index(edgeNums(g), edgeToNum(up[len(up)-1]))
+	switch i {
+	case 0:
+		return Copy2(g)
+	case 1:
+		return reversed(g)
+	case 2:
+		return transpose(g)
+	case 3:
+		return reversed(transpose(g))
+	case 4:
+		return Map(reversed[bool], g)
+	case 5:
+		return Map(reversed[bool], reversed(g))
+	case 6:
+		return Map(reversed[bool], transpose(g))
+	case 7:
+		return Map(reversed[bool], reversed(transpose(g)))
+	default:
+		panic(fmt.Sprintf("invalid index: %v", i))
+	}
+}
+
+// matchLeftEdge returns the correctly-oriented version of g, given left is to
+// its left
+func matchLeftEdge(g, left [][]bool) [][]bool {
+	return transpose(matchTopEdge(transpose(g), transpose(left)))
+}
+
+// matchLeftEdge returns the correctly-oriented version of g, given the
+// edge-numbers for its lower and right neighbors
+func matchDownAndRightEdges(g [][]bool, down, right edgeNum) [][]bool {
+	edges := edgeNums(g)
+	downI := Index(edges, down)
+	rightI := Index(edges, right)
+	switch downI % 4 {
+	case 0:
+		switch rightI % 2 {
+		case 0:
+			return Map(reversed[bool], reversed(g))
+		case 1:
+			return reversed(g)
+		}
+	case 1:
+		switch rightI % 2 {
+		case 0:
+			return Map(reversed[bool], g)
+		case 1:
+			return Copy2(g)
+		}
+	case 2:
+		switch rightI % 2 {
+		case 0:
+			return Map(reversed[bool], reversed(transpose(g)))
+		case 1:
+			return reversed(transpose(g))
+		}
+	case 3:
+		switch rightI % 2 {
+		case 0:
+			return Map(reversed[bool], transpose(g))
+		case 1:
+			return transpose(g)
+		}
+	}
+	panic(fmt.Sprintf("invalid indexes: %v %v", down, right))
+
+}
+
+// layout is the core of the algorithm, where we compute the overall layout of
+// which grids go where.  we also fix up the orientation of each grid (in place
+// in the input).
+func layout(grids map[gridNum][][]bool) [][]gridNum {
 	n := int(math.Sqrt(float64(len(grids))))
 	if n*n != len(grids) {
 		panic("non-square # of grids")
 	}
-	ret := Make2[int](n, n)
+	ret := Make2[gridNum](n, n)
 
-	edgePairs := MapBySlices(Keys(grids), func(n int) []int { return edgeNums(grids[n]) })
+	// compute which edges are in which grids
+	var edgePairs map[edgeNum][]gridNum = MapBySlices(
+		Keys(grids), func(n gridNum) []edgeNum { return edgeNums(grids[n]) })
 
-	connects := map[int][]int{}
+	// convert that into grid-connections
+	connects := map[gridNum][]gridNum{}
 	for num, grid := range grids {
-		var others []int
-		var downRight []int
-		for i, edge := range edgeNums(grid) {
+		var others []gridNum
+		var otherEdges []edgeNum
+		// iterate over the edges (we can skip the reversed ones) to figure
+		// out which grids we are connected to (and which edges are making the
+		// connection).
+		for _, edge := range edgeNums(grid)[:4] {
 			newOthers := Remove(edgePairs[edge], num)
 			others = append(others, newOthers...)
-			if len(newOthers) > 0 && i < 4 {
-				downRight = append(downRight, edge)
+			if len(newOthers) > 0 {
+				otherEdges = append(otherEdges, edge)
 			}
 		}
-		sort.Ints(others)
-		others = uniq(others)
 		connects[num] = others
-		if len(others) == 2 {
+
+		// if we have only 2 grid connections, and haven't yet found a
+		// corner, put us in the top-left
+		if len(others) == 2 && ret[0][0] == 0 {
 			ret[0][0] = num
-
-			edges := edgeNums(grid)
-			downI := Index(edges, downRight[0])
-			rightI := Index(edges, downRight[1])
-			switch downI % 4 {
-			case 0:
-				switch rightI % 2 {
-				case 0:
-					grids[ret[0][0]] = Map(reversed[bool], reversed(grid))
-				case 1:
-					grids[ret[0][0]] = reversed(grid)
-				}
-			case 1:
-				switch rightI % 2 {
-				case 0:
-					grids[ret[0][0]] = Map(reversed[bool], grid)
-				case 1:
-				}
-			case 2:
-				switch rightI % 2 {
-				case 0:
-					grids[ret[0][0]] = Map(reversed[bool], reversed(transpose(grid)))
-				case 1:
-					grids[ret[0][0]] = reversed(transpose(grid))
-				}
-			case 3:
-				switch rightI % 2 {
-				case 0:
-					grids[ret[0][0]] = Map(reversed[bool], transpose(grid))
-				case 1:
-					grids[ret[0][0]] = transpose(grid)
-				}
-			}
-
-			ret[0][1] = Remove(edgePairs[downRight[1]], num)[0]
 		}
 	}
 	if ret[0][0] == 0 {
 		panic("couldn't find corner")
 	}
 
-	g := grids[ret[0][1]]
-	edges := edgeNums(g)
-	leftI := Index(edges, btoi(col(grids[ret[0][0]], len(g)-1)))
-	switch leftI {
-	case 0:
-		grids[ret[0][1]] = transpose(g)
-	case 1:
-		grids[ret[0][1]] = Map(reversed[bool], transpose(g))
-	case 2:
-		grids[ret[0][1]] = g
-	case 3:
-		grids[ret[0][1]] = Map(reversed[bool], g)
-	case 4:
-		grids[ret[0][1]] = reversed(transpose(g))
-	case 5:
-		grids[ret[0][1]] = reversed(Map(reversed[bool], transpose(g)))
-	case 6:
-		grids[ret[0][1]] = reversed(g)
-	case 7:
-		grids[ret[0][1]] = reversed(Map(reversed[bool], g))
-	default:
-		panic("invalid index")
-	}
+	// now fix up the orientation of said conrner (can't do this in the
+	// loop since it mutates grids)
+	topLeft := grids[ret[0][0]]
+	downRight := filter(func(e edgeNum) bool { return len(edgePairs[e]) == 2 }, edgeNums(topLeft)[:4])
+	// arbitrarily choose which is right/down
+	grids[ret[0][0]] = matchDownAndRightEdges(topLeft, downRight[0], downRight[1])
 
-	used := map[int]bool{
+	// fill in that right neighbor too (we could do this later, but
+	// this is the only place where we have to look at the orientation
+	// of a neighbor grid to decide which grid we are (rather than just
+	// to decide which orientation we are) so we just do it now)
+	ret[0][1] = Remove(edgePairs[downRight[1]], ret[0][0])[0]
+	grids[ret[0][1]] = matchLeftEdge(grids[ret[0][1]], grids[ret[0][0]])
+
+	used := map[gridNum]bool{
 		ret[0][0]: true,
 		ret[0][1]: true,
 	}
 
+	// now fill in everything else.
 	for x := 0; x < n; x++ {
 		for y := 0; y < n; y++ {
 			if x == 0 && y < 2 {
@@ -151,6 +190,8 @@ func layout(grids map[int][][]bool) [][]int {
 			}
 
 			if x > 0 && y > 0 {
+				// if we have two neighbors, we are the intersection of their
+				// unused neighbors
 				up := ret[x-1][y]
 				left := ret[x][y-1]
 
@@ -160,31 +201,11 @@ func layout(grids map[int][][]bool) [][]int {
 				}
 
 				ret[x][y] = us[0]
-
-				g := grids[ret[x][y]]
-				edges := edgeNums(g)
-				upI := Index(edges, btoi(grids[up][len(g)-1]))
-				switch upI {
-				case 0:
-				case 1:
-					grids[ret[x][y]] = reversed(g)
-				case 2:
-					grids[ret[x][y]] = transpose(g)
-				case 3:
-					grids[ret[x][y]] = reversed(transpose(g))
-				case 4:
-					grids[ret[x][y]] = Map(reversed[bool], g)
-				case 5:
-					grids[ret[x][y]] = Map(reversed[bool], reversed(g))
-				case 6:
-					grids[ret[x][y]] = Map(reversed[bool], transpose(g))
-				case 7:
-					grids[ret[x][y]] = Map(reversed[bool], reversed(transpose(g)))
-				default:
-					panic(fmt.Sprintf("invalid index: %v", upI))
-				}
+				grids[ret[x][y]] = matchTopEdge(grids[ret[x][y]], grids[up])
 
 			} else if y > 0 {
+				// otherwise, we are on an edge.  we do a trick: we are the
+				// neighbor of our neighbor which has the fewest unused edges.
 				left := ret[x][y-1]
 
 				us := RemoveAll(connects[left], used)
@@ -192,31 +213,9 @@ func layout(grids map[int][][]bool) [][]int {
 					panic("impossible grid")
 				}
 
-				ret[x][y] = minBy(func(num int) int { return len(connects[num]) }, us)
+				ret[x][y] = minBy(func(num gridNum) int { return len(connects[num]) }, us)
+				grids[ret[x][y]] = matchLeftEdge(grids[ret[x][y]], grids[left])
 
-				g := grids[ret[x][y]]
-				edges := edgeNums(g)
-				leftI := Index(edges, btoi(col(grids[left], len(g)-1)))
-				switch leftI {
-				case 0:
-					grids[ret[x][y]] = transpose(g)
-				case 1:
-					grids[ret[x][y]] = Map(reversed[bool], transpose(g))
-				case 2:
-					grids[ret[x][y]] = g
-				case 3:
-					grids[ret[x][y]] = Map(reversed[bool], g)
-				case 4:
-					grids[ret[x][y]] = reversed(transpose(g))
-				case 5:
-					grids[ret[x][y]] = reversed(Map(reversed[bool], transpose(g)))
-				case 6:
-					grids[ret[x][y]] = reversed(g)
-				case 7:
-					grids[ret[x][y]] = reversed(Map(reversed[bool], g))
-				default:
-					panic(fmt.Sprintf("invalid index: %v", leftI))
-				}
 			} else if x > 0 {
 				up := ret[x-1][y]
 
@@ -225,30 +224,8 @@ func layout(grids map[int][][]bool) [][]int {
 					panic("impossible grid")
 				}
 
-				ret[x][y] = minBy(func(num int) int { return len(connects[num]) }, us)
-
-				g := grids[ret[x][y]]
-				edges := edgeNums(g)
-				upI := Index(edges, btoi(grids[up][len(g)-1]))
-				switch upI {
-				case 0:
-				case 1:
-					grids[ret[x][y]] = reversed(g)
-				case 2:
-					grids[ret[x][y]] = transpose(g)
-				case 3:
-					grids[ret[x][y]] = reversed(transpose(g))
-				case 4:
-					grids[ret[x][y]] = Map(reversed[bool], g)
-				case 5:
-					grids[ret[x][y]] = Map(reversed[bool], reversed(g))
-				case 6:
-					grids[ret[x][y]] = Map(reversed[bool], transpose(g))
-				case 7:
-					grids[ret[x][y]] = Map(reversed[bool], reversed(transpose(g)))
-				default:
-					panic(fmt.Sprintf("invalid index: %v", upI))
-				}
+				ret[x][y] = minBy(func(num gridNum) int { return len(connects[num]) }, us)
+				grids[ret[x][y]] = matchTopEdge(grids[ret[x][y]], grids[up])
 
 			}
 			used[ret[x][y]] = true
@@ -258,7 +235,8 @@ func layout(grids map[int][][]bool) [][]int {
 	return ret
 }
 
-func stitch(grids map[int][][]bool, layout [][]int) [][]bool {
+// stitch takes the grids and the layout and makes them into a super-grid.
+func stitch(grids map[gridNum][][]bool, layout [][]gridNum) [][]bool {
 	n := len(layout)
 	k := len(grids[layout[0][0]]) - 2
 	ret := Make2[bool](n*k, n*k)
@@ -274,10 +252,10 @@ func stitch(grids map[int][][]bool, layout [][]int) [][]bool {
 	return ret
 }
 
-func day20a(grids map[int][][]bool) (int, error) {
+func day20a(grids map[gridNum][][]bool) (int, error) {
 	l := layout(grids)
 	n := len(l)
-	return l[0][0] * l[0][n-1] * l[n-1][0] * l[n-1][n-1], nil
+	return int(l[0][0] * l[0][n-1] * l[n-1][0] * l[n-1][n-1]), nil
 }
 
 var seamonster = [][2]int{
@@ -311,7 +289,7 @@ func print2(g [][]bool) {
 	}
 }
 
-func day20b(grids map[int][][]bool) (int, error) {
+func day20b(grids map[gridNum][][]bool) (int, error) {
 	grid := stitch(grids, layout(grids))
 	nonmonsters := Copy2(grid)
 	for i := range grid {

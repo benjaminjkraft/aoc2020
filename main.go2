@@ -8,54 +8,56 @@ import (
 	"strconv"
 )
 
-type solution[T any] struct {
-	parse        func(string) (T, error)
-	part1, part2 func(T) (int, error)
+type solution[T, U, V any] struct {
+	parse func(string) (T, error)
+	part1 func(T) (U, error)
+	part2 func(T) (V, error)
 }
 
-func (s solution[T]) solve(input string) (int, int, error) {
+func (s solution[T, U, V]) solve(input string) (string, string, error) {
 	parsed, err := s.parse(input)
 	if err != nil {
-		return -1, -1, fmt.Errorf("invalid input: %w", err)
+		return "", "", fmt.Errorf("invalid input: %w", err)
 	}
 
 	ans1, err := s.part1(parsed)
 	if err != nil {
-		return -1, -1, fmt.Errorf("part 1 failed: %w", err)
+		return "", "", fmt.Errorf("part 1 failed: %w", err)
 	}
 
 	ans2, err := s.part2(parsed)
 	if err != nil {
-		return -1, -1, fmt.Errorf("part 2 failed: %w", err)
+		return "", "", fmt.Errorf("part 2 failed: %w", err)
 	}
-	return ans1, ans2, nil
+	return fmt.Sprint(ans1), fmt.Sprint(ans2), nil
 }
 
 type solvable interface {
-	solve(string) (int, int, error)
+	solve(string) (string, string, error)
 }
 
 var solutions = map[int]solvable{
-	1:  solution[[]int]{lineParser(strconv.Atoi), day01a, day01b},
-	2:  solution[[]password]{lineParser(parsePassword), day02a, day02b},
-	3:  solution[[][]bool]{lineParser(parseTree), day03a, day03b},
-	4:  solution[[]passport]{blockParser(parsePassport), day04a, day04b},
-	5:  solution[[]int]{lineParser(parseSeat), day05a, day05b},
-	6:  solution[[]customs]{blockParser(parseCustoms), day06a, day06b},
-	7:  solution[bagGraph]{parseBagGraph, day07a, day07b},
-	8:  solution[[]instruction]{lineParser(parseInstruction), day08a, day08b},
-	9:  solution[[]int]{lineParser(strconv.Atoi), day09a, day09b},
-	10: solution[[]int]{lineParser(strconv.Atoi), day10a, day10b},
-	11: solution[[][]byte]{lineParser(strtobytes), day11a, day11b},
-	12: solution[[]nav]{lineParser(parseNav), day12a, day12b},
-	13: solution[sched]{parseSched, day13a, day13b},
-	14: solution[[]maskInstruction]{lineParser(parseMaskInstrunction), day14a, day14b},
-	15: solution[[]int]{commaParser(strconv.Atoi), day15a, day15b},
-	16: solution[tickets]{parseTickets, day16a, day16b},
-	17: solution[[][]bool]{lineParser(hashchars), day17a, day17b},
-	18: solution[[]expr]{lineParser(parseExpr), day18a, day18b},
-	19: solution[messagesAndRules]{parseMessagesAndRules, day19a, day19b},
-	20: solution[map[gridNum][][]bool]{parseGrids, day20a, day20b},
+	1:  solution[[]int, int, int]{lineParser(strconv.Atoi), day01a, day01b},
+	2:  solution[[]password, int, int]{lineParser(parsePassword), day02a, day02b},
+	3:  solution[[][]bool, int, int]{lineParser(parseTree), day03a, day03b},
+	4:  solution[[]passport, int, int]{blockParser(parsePassport), day04a, day04b},
+	5:  solution[[]int, int, int]{lineParser(parseSeat), day05a, day05b},
+	6:  solution[[]customs, int, int]{blockParser(parseCustoms), day06a, day06b},
+	7:  solution[bagGraph, int, int]{parseBagGraph, day07a, day07b},
+	8:  solution[[]instruction, int, int]{lineParser(parseInstruction), day08a, day08b},
+	9:  solution[[]int, int, int]{lineParser(strconv.Atoi), day09a, day09b},
+	10: solution[[]int, int, int]{lineParser(strconv.Atoi), day10a, day10b},
+	11: solution[[][]byte, int, int]{lineParser(strtobytes), day11a, day11b},
+	12: solution[[]nav, int, int]{lineParser(parseNav), day12a, day12b},
+	13: solution[sched, int, int]{parseSched, day13a, day13b},
+	14: solution[[]maskInstruction, int, int]{lineParser(parseMaskInstrunction), day14a, day14b},
+	15: solution[[]int, int, int]{commaParser(strconv.Atoi), day15a, day15b},
+	16: solution[tickets, int, int]{parseTickets, day16a, day16b},
+	17: solution[[][]bool, int, int]{lineParser(hashchars), day17a, day17b},
+	18: solution[[]expr, int, int]{lineParser(parseExpr), day18a, day18b},
+	19: solution[messagesAndRules, int, int]{parseMessagesAndRules, day19a, day19b},
+	20: solution[map[gridNum][][]bool, int, int]{parseGrids, day20a, day20b},
+	21: solution[[]food, int, string]{lineParser(parseFood), day21a, day21b},
 }
 
 func run(day int) {

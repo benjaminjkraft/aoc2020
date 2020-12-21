@@ -1,0 +1,91 @@
+package main
+
+import (
+	"fmt"
+	"regexp"
+	"sort"
+	"strings"
+)
+
+type food struct {
+	ingredients []string
+	allergens   []string
+}
+
+var foodRE = regexp.MustCompile(`^([^(]*)(?: \(contains ([^)]*)\))?$`)
+
+func parseFood(line string) (food, error) {
+	m := foodRE.FindStringSubmatch(line)
+	if m == nil || len(m) < 2 {
+		return food{}, fmt.Errorf("invalid food: %v", line)
+	}
+
+	ingredients := m[1]
+	allergens := ""
+	if len(m) == 3 {
+		allergens = m[2]
+	}
+
+	return food{
+		ingredients: strings.Split(ingredients, " "),
+		allergens:   strings.Split(allergens, ", "),
+	}, nil
+}
+
+func ingredients(foods []food) map[string]bool {
+	return SetOf(Concat(Map(func(f food) []string { return f.ingredients }, foods)))
+}
+func allergens(foods []food) map[string][]string {
+	allAllergens := Concat(Map(func(f food) []string { return f.allergens }, foods))
+	sort.Strings(allAllergens)
+	allAllergens = uniq(allAllergens)
+
+	ingredients := ingredients(foods)
+
+	ret := make(map[string][]string, len(allAllergens))
+	for _, allergen := range allAllergens {
+		possibleIngredients := Keys(ingredients)
+		for _, food := range foods {
+			if Contains(food.allergens, allergen) {
+				possibleIngredients = intersection(possibleIngredients, food.ingredients)
+			}
+		}
+
+		ret[allergen] = possibleIngredients
+	}
+
+	return ret
+}
+
+func day21a(input []food) (int, error) {
+	ingredients := ingredients(input)
+	allergens := allergens(input)
+	for _, possibleIngredients := range allergens {
+		for _, ingredient := range possibleIngredients {
+			ingredients[ingredient] = false
+		}
+	}
+
+	return sum(Map(func(f food) int {
+		return count(func(i string) bool { return ingredients[i] }, f.ingredients)
+	}, input)), nil
+}
+
+func day21b(input []food) (string, error) {
+	allergens := allergens(input)
+	finalAllergens := map[string]string{}
+	for len(allergens) > 0 {
+		for a, is := range allergens {
+			if len(is) == 1 {
+				finalAllergens[a] = is[0]
+				delete(allergens, a)
+				for a2, is2 := range allergens {
+					allergens[a2] = Remove(is2, is[0])
+				}
+			}
+		}
+	}
+	names := Keys(finalAllergens)
+	sort.Strings(names)
+	return strings.Join(Map(func(a string) string { return finalAllergens[a] }, names), ","), nil
+}

@@ -328,3 +328,11 @@ func Index[T comparable](xs []T, x T) int {
 	}
 	return -1
 }
+
+func SetOf[T comparable](xs []T) map[T]bool {
+	ret := map[T]bool{}
+	for _, x := range xs {
+		ret[x] = true
+	}
+	return ret
+}

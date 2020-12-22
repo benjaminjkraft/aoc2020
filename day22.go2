@@ -1,0 +1,102 @@
+package main
+
+import (
+	"os"
+	"runtime/pprof"
+	// "fmt"
+	"sort"
+	"strconv"
+	"strings"
+)
+
+func parseDeck(block string) ([]int, error) {
+	return MapE(strconv.Atoi, nonzero(strings.Split(block, "\n")[1:]))
+}
+
+func war(decks [][]int) (winner int, deck []int) {
+	decks = Copy2(decks)
+	for All(func(d []int) bool { return len(d) > 0 }, decks) {
+		cards := Map(Head[int], decks)
+		_, i := maxIndex(cards)
+		sort.Ints(cards)
+		decks[i] = append(decks[i], reversed(cards)...)
+		decks = Map(Tail[int], decks)
+	}
+
+	for i, deck := range decks {
+		if len(deck) > 0 {
+			return i, deck
+		}
+	}
+	return -1, nil
+}
+
+func score(deck []int) int {
+	n := len(deck)
+	s := 0
+	for i, c := range deck {
+		s += (n - i) * c
+	}
+	return s
+}
+
+func day22a(input [][]int) (int, error) {
+	_, deck := war(input)
+	return score(deck), nil
+}
+
+func hashDecks(decks [][]int) string {
+	// saves a ton of time over fmt.Sprint!
+	var buf strings.Builder
+	for _, d := range decks {
+		buf.Grow(len(d)+1)
+		for _, i := range d {
+			buf.Write([]byte{byte(i)})
+		}
+		buf.Write([]byte("|"))
+	}
+	return buf.String()
+}
+
+func recwar(decks [][]int) (winner int, deck []int) {
+	decks = Copy2(decks)
+	seen := map[string]bool{}
+	for All(func(d []int) bool { return len(d) > 0 }, decks) {
+		h := hashDecks(decks)
+		if seen[h] {
+			return 0, decks[0]
+		}
+		seen[h] = true
+
+		cards := Map(Head[int], decks)
+		winner := -1
+		recDecks := Map(func(x Pair[int, []int]) []int {
+			if x.First < len(x.Second) {
+				return x.Second[1 : x.First+1]
+			}
+			return nil
+		}, Zip(cards, decks))
+		if All(func(d []int) bool { return d != nil }, recDecks) {
+			winner, _ = recwar(recDecks)
+		} else {
+			_, winner = maxIndex(cards)
+		}
+		decks[winner] = append(decks[winner], cards[winner], cards[1-winner])
+		decks = Map(Tail[int], decks)
+	}
+
+	for i, deck := range decks {
+		if len(deck) > 0 {
+			return i, deck
+		}
+	}
+	return -1, nil
+}
+
+func day22b(input [][]int) (int, error) {
+	f, _ := os.Create("/tmp/p")
+	pprof.StartCPUProfile(f)
+	defer pprof.StopCPUProfile()
+	_, deck := recwar(input)
+	return score(deck), nil
+}

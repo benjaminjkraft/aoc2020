@@ -197,17 +197,24 @@ func commaParser[T any](f func(string) (T, error)) func(string) ([]T, error) {
 	}
 }
 
-func max(xs ...int) int {
+func maxIndex(xs []int) (max, i int) {
 	if len(xs) == 0 {
 		panic("max of no args")
 	}
 
 	m := xs[0]
-	for _, x := range xs[1:] {
+	mi := 0
+	for i, x := range xs[1:] {
 		if x > m {
 			m = x
+			mi = i + 1
 		}
 	}
+	return m, mi
+}
+
+func max(xs ...int) int {
+	m, _ := maxIndex(xs)
 	return m
 }
 
@@ -335,4 +342,35 @@ func SetOf[T comparable](xs []T) map[T]bool {
 		ret[x] = true
 	}
 	return ret
+}
+
+func Head[T any](xs []T) T   { return xs[0] }
+func Tail[T any](xs []T) []T { return xs[1:] }
+
+func Zip[T, U any](xs []T, ys []U) []Pair[T, U] {
+	ret := make([]Pair[T, U], len(xs))
+	for i, x := range xs {
+		ret[i] = Pair[T, U]{x, ys[i]}
+	}
+	return ret
+}
+
+func SliceEqBy[T any](eq func(T, T) bool, xs, ys []T) bool {
+	if len(xs) != len(ys) {
+		return false
+	}
+	for i, x := range xs {
+		if !eq(x, ys[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+func SliceEq[T comparable](xs, ys []T) bool {
+	return SliceEqBy(func(x, y T) bool { return x == y }, xs, ys)
+}
+
+func SliceEq2[T comparable](xss, yss [][]T) bool {
+	return SliceEqBy(SliceEq[T], xss, yss)
 }

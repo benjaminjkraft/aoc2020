@@ -1,9 +1,6 @@
 package main
 
 import (
-	"os"
-	"runtime/pprof"
-	// "fmt"
 	"sort"
 	"strconv"
 	"strings"
@@ -94,9 +91,6 @@ func recwar(decks [][]int) (winner int, deck []int) {
 }
 
 func day22b(input [][]int) (int, error) {
-	f, _ := os.Create("/tmp/p")
-	pprof.StartCPUProfile(f)
-	defer pprof.StopCPUProfile()
 	_, deck := recwar(input)
 	return score(deck), nil
 }

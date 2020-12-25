@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"runtime/pprof"
 	"sort"
 	"strconv"
+	"time"
 )
 
 type solution[T, U, V any] struct {
@@ -71,16 +73,30 @@ func run(day int) {
 		os.Exit(1)
 	}
 
+	before := time.Now()
 	ans1, ans2, err := solutions[day].solve(string(input))
+	duration := time.Since(before)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 	fmt.Println(ans1)
 	fmt.Println(ans2)
+	fmt.Printf("(took %s)\n", duration)
 }
 
 func main() {
+	fn, ok := os.LookupEnv("PPROF")
+	if ok {
+		f, err := os.Create(fn)
+		if err != nil {
+			fmt.Println(fmt.Errorf("unable to profile: %v", err))
+		} else {
+			pprof.StartCPUProfile(f)
+			defer pprof.StopCPUProfile()
+		}
+	}
+
 	if len(os.Args) > 1 {
 		day, err := strconv.Atoi(os.Args[1])
 		if err != nil {

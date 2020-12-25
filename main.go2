@@ -61,6 +61,7 @@ var solutions = map[int]solvable{
 	22: solution[[][]int, int, int]{blockParser(parseDeck), day22a, day22b},
 	23: solution[[]int, string, int]{parseDigits, day23a, day23b},
 	24: solution[[][]string, int, int]{lineParser(parseDirs), day24a, day24b},
+	25: solution[[]int, int, string]{lineParser(strconv.Atoi), day25a, day25b},
 }
 
 func run(day int) {

@@ -1,0 +1,66 @@
+package main
+
+import (
+	"os"
+	"runtime/pprof"
+	"strconv"
+	"strings"
+)
+
+func parseDigits(input string) ([]int, error) {
+	return MapE(
+		func(c rune) (int, error) { return strconv.Atoi(string(c)) },
+		[]rune(strings.TrimSpace(input)))
+}
+
+func runCups(input []int, rounds int) []int {
+	cups := NewCircularList(input)
+	nodes := map[int]*List[int]{}
+	for nodes[cups.Head] == nil {
+		nodes[cups.Head] = cups
+		cups = cups.Tail
+	}
+
+	for i := 0; i < rounds; i++ {
+		destNum := cups.Head - 1
+		move1 := cups.Tail
+		move2 := move1.Tail
+		move3 := move2.Tail
+		for {
+			if destNum == 0 {
+				destNum = len(input)
+			}
+			if destNum != move1.Head && destNum != move2.Head && destNum != move3.Head {
+				break
+			}
+			destNum--
+		}
+
+		dest := nodes[destNum]
+
+		cups.Tail = move3.Tail
+		move3.Tail = dest.Tail
+		dest.Tail = move1
+
+		cups = cups.Tail
+	}
+
+	return nodes[1].Slice()
+}
+
+func day23a(input []int) (string, error) {
+	cups := runCups(input, 100)
+	return strings.Join(Map(strconv.Itoa, cups[1:]), ""), nil
+}
+
+func day23b(input []int) (int, error) {
+	cups := Copy(input)
+	for i := len(input); i < 1e6; i++ {
+		cups = append(cups, i+1)
+	}
+	f, _ := os.Create("/tmp/p")
+	pprof.StartCPUProfile(f)
+	defer pprof.StopCPUProfile()
+	cups = runCups(cups, 1e7)
+	return cups[1] * cups[2], nil
+}

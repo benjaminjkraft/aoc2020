@@ -59,6 +59,8 @@ var solutions = map[int]solvable{
 	20: solution[map[gridNum][][]bool, int, int]{parseGrids, day20a, day20b},
 	21: solution[[]food, int, string]{lineParser(parseFood), day21a, day21b},
 	22: solution[[][]int, int, int]{blockParser(parseDeck), day22a, day22b},
+	23: solution[[]int, string, int]{parseDigits, day23a, day23b},
+	24: solution[[][]string, int, int]{lineParser(parseDirs), day24a, day24b},
 }
 
 func run(day int) {

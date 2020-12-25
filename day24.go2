@@ -1,0 +1,78 @@
+package main
+
+import "fmt"
+
+func parseDirs(line string) ([]string, error) {
+	var ret []string
+	for i := 0; i < len(line); i++ {
+		switch line[i] {
+		case 'e', 'w':
+			ret = append(ret, line[i:i+1])
+		case 'n', 's':
+			ret = append(ret, line[i:i+2])
+			i++
+		default:
+			return nil, fmt.Errorf("bad dir: %v", line[i])
+		}
+	}
+	return ret, nil
+}
+
+func fill(input [][]string) map[Pair[int, int]]bool {
+	grid := map[Pair[int, int]]bool{}
+	for _, dirs := range input {
+		x, y := 0, 0
+		for _, dir := range dirs {
+			switch dir {
+			case "e":
+				x++
+			case "w":
+				x--
+			case "ne":
+				y++
+			case "nw":
+				y++
+				x--
+			case "se":
+				y--
+				x++
+			case "sw":
+				y--
+			}
+		}
+		grid[Pair[int, int]{x, y}] = !grid[Pair[int, int]{x, y}]
+	}
+	return grid
+}
+
+func day24a(input [][]string) (int, error) {
+	return countEq(true, Values(fill(input))), nil
+}
+
+func day24b(input [][]string) (int, error) {
+	grid := fill(input)
+	bound := max(max(Map(func(p Pair[int, int]) int { return p.First }, Keys(grid))...),
+		max(Map(func(p Pair[int, int]) int { return p.Second }, Keys(grid))...))
+
+	for i := 0; i < 100; i++ {
+		newGrid := CopyMap(grid)
+		n := bound+i+1
+		for x := -n; x <= n; x++ {
+			for y := -n; y <= n; y++ {
+				this := grid[Pair[int, int]{x, y}]
+				nbs := countEq(true, []bool{
+					grid[Pair[int, int]{x+1, y}], grid[Pair[int, int]{x-1, y}],
+					grid[Pair[int, int]{x, y+1}], grid[Pair[int, int]{x, y-1}],
+					grid[Pair[int, int]{x-1, y+1}], grid[Pair[int, int]{x+1, y-1}],
+				})
+				if this && nbs > 0 && nbs <= 2 || (!this && nbs == 2) {
+					newGrid[Pair[int, int]{x, y}] = true
+				} else if this {
+					newGrid[Pair[int, int]{x, y}] = false
+				}
+			}
+		}
+		grid = newGrid
+	}
+	return countEq(true, Values(grid)), nil
+}

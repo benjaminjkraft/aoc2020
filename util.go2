@@ -272,6 +272,14 @@ func id[T any](x T) T { return x }
 func Copy[T any](xs []T) []T      { return Map[T, T](id[T], xs) }
 func Copy2[T any](xs [][]T) [][]T { return Map[[]T, []T](Copy[T], xs) }
 
+func CopyMap[K comparable, V any](m map[K]V) map[K]V {
+	c := map[K]V{}
+	for k, v := range m {
+		c[k] = v
+	}
+	return c
+}
+
 func mod(x, m int) int {
 	r := x % m
 	if r < 0 {
@@ -373,4 +381,39 @@ func SliceEq[T comparable](xs, ys []T) bool {
 
 func SliceEq2[T comparable](xss, yss [][]T) bool {
 	return SliceEqBy(SliceEq[T], xss, yss)
+}
+
+type List[T any] struct {
+	Head T
+	Tail *List[T]
+}
+
+func NewCircularList[T any](s []T) *List[T] {
+	start := &List[T]{s[0], nil}
+	l := start
+	for i := len(s) - 1; i >= 1; i-- {
+		l = &List[T]{s[i], l}
+	}
+	start.Tail = l
+	return start
+}
+
+func (l *List[T]) At(n int) *List[T] {
+	for i := 0; i < n; i++ {
+		l = l.Tail
+	}
+	return l
+}
+
+func (l *List[T]) Slice() []T {
+	start := l
+	var ret []T
+	for {
+		ret = append(ret, l.Head)
+		l = l.Tail
+		if l == nil || l == start {
+			break
+		}
+	}
+	return ret
 }
